@@ -1,0 +1,455 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-weight: 200;
+    color: var(--tg-theme-text-color);
+    background: var(--tg-theme-bg-color);
+
+    --default-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    --block-bg-color: var(--tg-theme-bg-color);
+    --bg-color: #ebedf0;
+    --animation: .15s ease;
+    --page-animation-duration: .3s;
+    --page-animation: var(--page-animation-duration) ease;
+    --status-height: 48px;
+    --accent-color: #31b545;
+    --main-color: #f8a917;
+    --text-color: #222;
+    --page-hint-color: #83878a;
+    --hint-color: #74787a;
+    --placeholder-color: #999da1;
+    --ripple-duration: .45s;
+    --ripple-end-duration: .3s;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: default;
+}
+
+#shop_menu_page {
+    display: block;
+    text-align: center;
+}
+
+#shop_items_page {
+    display: none;
+    text-align: center;
+}
+
+#shop_about_us_page {
+    display: none;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.about_us_main_text {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.about_us_title {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.shop_advantages {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  font-size: 1.5em;
+  color: rgb(248, 168, 24);
+}
+
+.about_us_ul {
+  list-style-type: decimal;
+  padding-left: 20px;
+  padding-top: 10px;
+}
+
+.shop_name {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  font-size: 2em;
+  color: rgb(248, 168, 24);
+}
+
+.shop_footer {
+  color: #fff;
+  font-size: 1em;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  margin: 0;
+}
+
+.main_menu_footer {
+  display: flex;
+  justify-content: center;
+  position: absolute;
+  bottom: 10px;
+  left: 20px;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.back_to_main_menu_button {
+  display: flex;
+  justify-content: center;
+}
+
+.shop_about_us p {
+  line-height: 1.6;
+}
+
+.main-shop-menu {
+    width: 100%;
+    text-align: center;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.main_menu_btn {
+    border: 0;
+    border-radius: 5px;
+    margin-top: 50px;
+    height: 60px;
+    width: 200px;
+    font-size: 20px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 500ms ease;
+    color: #000;
+    background: #00ff92;
+}
+
+.main_menu_btn:hover {
+    background: rgb(82, 212, 82);
+}
+
+.shop_items {
+    display: flex;
+    text-align: center;
+    flex-wrap: wrap;
+    margin: 0 auto;
+    max-width: 480px;
+    justify-content: center;
+    /* justify-content: space-around; */
+    align-content: flex-end;
+    transition: max-height var(--page-animation), opacity var(--page-animation);
+    /* background-color: var(--block-bg-color); */
+}
+
+body.order-mode .cafe-items {
+  max-height: 0 !important;
+}
+
+.cafe-item {
+  position: relative;
+  padding: 4px 5px 21px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.shop_item_image {
+    position: relative;
+    width: 150px;
+    height: 150px;
+}
+
+.cafe-item-label {
+    justify-content: center;
+}
+
+.cafe-item-title {
+    font-weight: 500;
+}
+
+.cafe-item-price {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cafe-item-price:before {
+    /* display: inline-block; */
+    vertical-align: top;
+    content: '';
+    width: 2px;
+    height: 2px;
+    border-radius: 2px;
+    background-color: currentColor;
+    margin: 7px 4px;
+}
+.cafe-item-buttons {
+    display: flex;
+    width: 80px;
+    justify-content: space-between;
+    margin: 10px auto 0;
+    position: relative;
+    transition: all var(--animation);
+}
+button {
+    cursor: pointer;
+}
+button,
+.cafe-item-counter {
+  display: inline-block;
+  font-family: var(--default-font);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 18px;
+  padding: 6px 16px;
+  height: 30px;
+  border-radius: 7px;
+  box-sizing: border-box;
+  background-color: var(--main-color);
+  text-transform: uppercase;
+  color: #fff;
+  outline: none;
+  border: none;
+}
+.cafe-item-counter {
+  position: absolute;
+  right: 0;
+  top: 0;
+  min-width: 22px;
+  height: 22px;
+  padding: 2px 6px;
+  margin: 4px 6px;
+  border-radius: 11px;
+  transform: scale3d(0, 0, 1);
+  animation: var(--animation) both;
+  pointer-events: none;
+  z-index: 3;
+}
+.cafe-item-incr-button {
+  position: absolute !important;
+  top: 0;
+  right: 0;
+  transition: width var(--animation);
+  width: 80px;
+}
+.selected .cafe-item-incr-button {
+    width: 38px;
+}
+.cafe-item-decr-button {
+    position: relative;
+    width: 38px;
+}
+.cafe-item-decr-button {
+    background-color: #e64d44;
+    pointer-events: none;
+    transform: scale3d(0.9, 0.9, 1);
+    transition: transform var(--animation), visibility var(--animation);
+    visibility: hidden;
+}
+.selected .cafe-item-decr-button {
+    pointer-events: auto;
+    transform: scale3d(1, 1, 1);
+    visibility: visible;
+}
+  .cafe-item-incr-button:before,
+  .cafe-item-incr-button:after,
+  .cafe-item-decr-button:before {
+    display: inline-block;
+    position: absolute;
+    content: '';
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    width: 14px;
+    height: 3px;
+    background-color: #fff;
+    border-radius: 1px;
+    z-index: 1;
+}
+.cafe-item-incr-button:before,
+.cafe-item-incr-button:after {
+    background-color: rgba(255, 255, 255, 0);
+    transition: background-color var(--animation);
+}
+.selected .cafe-item-incr-button:before,
+.selected .cafe-item-incr-button:after {
+    background-color: #fff;
+}
+.cafe-item-incr-button .button-item-label {
+    transition: transform var(--animation);
+}
+.selected .cafe-item-incr-button .button-item-label {
+    transform: scale3d(0.4, 0, 1);
+}
+.cafe-item-incr-button:after {
+    width: 3px;
+    height: 14px;
+}
+
+.shop_order_image{
+  width: 50px;
+  height: 50px;
+  margin: 0 auto;
+}
+
+.cafe-order-overview {
+    display: none;
+    font-family: var(--default-font);
+    transition: opacity var(--page-animation);
+  }
+  .cafe-order-header-wrap {
+    padding: 21px 20px 14px;
+    display: flex;
+    align-items: center;
+  }
+  .cafe-order-header {
+    font-size: 17px;
+    line-height: 21px;
+    text-transform: uppercase;
+    flex-grow: 1;
+    padding: 0;
+    margin: 0;
+  }
+  .cafe-order-edit {
+    font-size: 15px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--accent-color);
+  }
+  .cafe-order-item {
+    display: none;
+    padding: 5px 20px 5px 14px;
+  }
+  .cafe-order-item.selected {
+    display: flex;
+  }
+  .cafe-order-item-label {
+    flex-grow: 1;
+  }
+  .cafe-order-item-photo {
+    text-align: center;
+    width: 50px;
+    height: 50px;
+    margin-right: 11px;
+  }
+  .cafe-order-item-photo .cafe-item-emoji {
+    font-size: 38px;
+    line-height: 50px;
+  }
+  .cafe-order-item-photo .cafe-item-lottie {
+    width: 40px;
+    margin: 4px 0;
+  }
+  .cafe-order-item-title {
+    font-size: 15px;
+    line-height: 18px;
+    font-weight: 700;
+    padding: 3px 0;
+  }
+  .cafe-order-item-counter {
+    color: var(--main-color);
+  }
+  .cafe-order-item-description {
+    font-size: 14px;
+    line-height: 17px;
+    -webkit-font-smoothing: antialiased;
+    color: var(--page-hint-color);
+    padding: 2px 0;
+  }
+  .cafe-order-item-price {
+    font-size: 14px;
+    line-height: 17px;
+    font-weight: 500;
+    padding: 4px 0;
+  }
+
+  .button-item-label {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
+    position: relative;
+    z-index: 1;
+  }
+  
+  @-webkit-keyframes rotate-circle {
+    from { transform: rotateZ(-90deg); }
+    to   { transform: rotateZ(630deg); }
+  }
+  @keyframes rotate-circle {
+    from { transform: rotateZ(-90deg); }
+    to   { transform: rotateZ(630deg); }
+  }
+  
+  @-webkit-keyframes resize-circle {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: 12500px; }
+  }
+  @keyframes resize-circle {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: 12500px; }
+  }
+  
+  @-webkit-keyframes badge-incr {
+    from, to { transform: scale3d(1, 1, 1); }
+    40% { transform: scale3d(1.2, 1.2, 1); }
+  }
+  @keyframes badge-incr {
+    from, to { transform: scale3d(1, 1, 1); }
+    40% { transform: scale3d(1.2, 1.2, 1); }
+  }
+  
+  @-webkit-keyframes badge-incr2 {
+    from, to { transform: scale3d(1, 1, 1); }
+    40% { transform: scale3d(1.2, 1.2, 1); }
+  }
+  @keyframes badge-incr2 {
+    from, to { transform: scale3d(1, 1, 1); }
+    40% { transform: scale3d(1.2, 1.2, 1); }
+  }
+  
+  @-webkit-keyframes badge-decr {
+    from, to { transform: scale3d(1, 1, 1); }
+    40% { transform: scale3d(0.8, 0.8, 1); }
+  }
+  @keyframes badge-decr {
+    from, to { transform: scale3d(1, 1, 1); }
+    40% { transform: scale3d(0.8, 0.8, 1); }
+  }
+  
+  @-webkit-keyframes badge-decr2 {
+    from, to { transform: scale3d(1, 1, 1); }
+    40% { transform: scale3d(0.8, 0.8, 1); }
+  }
+  @keyframes badge-decr2 {
+    from, to { transform: scale3d(1, 1, 1); }
+    40% { transform: scale3d(0.8, 0.8, 1); }
+  }
+  
+  @-webkit-keyframes badge-show {
+    from { transform: scale3d(0.5, 0.5, 1); opacity: 0; visibility: hidden; }
+    30%  { transform: scale3d(1.2, 1.2, 1); }
+    to   { transform: scale3d(1, 1, 1); opacity: 1; visibility: visible; }
+  }
+  @keyframes badge-show {
+    from { transform: scale3d(0.5, 0.5, 1); opacity: 0; visibility: hidden; }
+    30%  { transform: scale3d(1.2, 1.2, 1); }
+    to   { transform: scale3d(1, 1, 1); opacity: 1; visibility: visible; }
+  }
+  
+  @-webkit-keyframes badge-hide {
+    from { transform: scale3d(1, 1, 1); opacity: 1; visibility: visible; }
+    to   { transform: scale3d(0.5, 0.5, 1); opacity: 0; visibility: hidden; }
+  }
+  @keyframes badge-hide {
+    from { transform: scale3d(1, 1, 1); opacity: 1; visibility: visible; }
+    to   { transform: scale3d(0.5, 0.5, 1); opacity: 0; visibility: hidden; }
+  }
+  

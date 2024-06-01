@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+
+{% load static %}
+
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <link href="{% static 'shop.css' %}" rel="stylesheet">
+    <title>КЛЮЧНИК</title>
+</head>
+<body>
+    <section id="shop_menu_page">
+        <div class="main_shop_menu">
+            <h1 class="shop_name">КЛЮЧНИК</h1>
+            <br/>
+            <h1>лучший магазин ключей</h1>
+            <div>
+                <button class="main_menu_btn" id="about_us">О нас</button>
+            </div>
+            <div>
+                <button class="main_menu_btn" id="make_order">Сделать заказ</button>
+            </div>
+            <div class="main_menu_footer">
+                <h2 class="shop_footer">Контакты: @ato_mat</h2>
+            </div>
+        </div>
+    </section>
+
+    <section class="cafe-page shop_items" id="shop_items_page">
+        {% for item in products %}
+            <div class="cafe-item js-item" data-item-id="{{ item.id }}" data-item-price="{{ item.price }}">
+                <div class="cafe-item-counter js-item-counter">1</div>
+                <div class="cafe-item-photo">
+                    <img src="{{ item.image_original.url }}" alt="{{ item.name }}" class="shop_item_image">
+                </div>
+                <div class="cafe-item-label">
+                    <span class="cafe-item-title">{{ item.name }}</span><br/>
+                    <span class="cafe-item-price">{{ item.price }}RUB</span>
+                </div>
+                <div class="cafe-item-buttons">
+                    <button class="cafe-item-decr-button js-item-decr-btn button-item">
+                    </button>
+                    <button class="cafe-item-incr-button js-item-incr-btn button-item">
+                        <span class="button-item-label">ADD</span>
+                    </button>
+                </div>
+            </div>
+        {% endfor %}
+        <div class="cafe-item-shadow"></div>
+        <div class="cafe-item-shadow"></div>
+        <div class="cafe-item-shadow"></div>
+        <div class="cafe-item-shadow"></div>
+    </section>  
+
+    <section id="shop_about_us_page">
+        <div class="shop_about_us">
+            <header class="about_us_main_text">
+                <h1 class="shop_name">КЛЮЧНИК</h1>
+                <p>Мы - динамично развивающийся онлайн магазин, предлагающий широкий ассортимент товаров.</p>
+                <p>Мы работаем 24 часа в сутки, чтобы предоставить вам возможность совершать покупки в любое удобное для вас время.</p>
+                <p>Наша главная цель - удовлетворить потребности каждого клиента. Покупайте ключи стим только у нас и убедитесь в нашей надежности и профессионализме!</p>
+            </header>
+    
+            <div class="about_us_advantages">
+                <h2 class="shop_advantages">Наши преимущества:</h2>
+                <ul class="about_us_ul">
+                    <li>Широкий ассортимент: Предлагаем большой выбор игр, чтобы каждый мог найти то, что ему нужно.</li>
+                    <li>Качество: Все наши ключи проходят проверку.</li>
+                    <li>Доступные цены: У нас товары по самым лучшим ценам.</li>
+                    <li>Удобство покупки: Работаем 24 часа в сутки, чтобы вы могли совершать покупки в любое удобное для вас время.</li>
+                    <li>Профессиональный сервис: Наша команда всегда готова помочь вам с любыми вопросами и проблемами.</li>
+                </ul>
+            </div>
+
+            <div class="back_to_main_menu_button">
+                <button class="main_menu_btn" id="back_to_main_menu">Назад</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="cafe-page cafe-order-overview">
+        <div class="cafe-block">
+            <div class="cafe-order-header-wrap">
+                <h2 class="cafe-order-header">Ваш заказ</h2>
+                <span class="cafe-order-edit js-order-edit">Изменить</span>
+            </div>
+            <div class="cafe-order-items">
+                {% for item in products %}
+                    <div class="cafe-order-item js-order-item" data-item-id="{{ item.id }}">
+                        <div class="cafe-order-item-photo">
+                            <picture>
+                                <img src="{{ item.image_original.url }}"
+                                    style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iLTMwMCUiIHgyPSItMjAwJSIgeTE9IjAiIHkyPSIwIj48c3RvcCBvZmZzZXQ9Ii0xMCUiIHN0b3Atb3BhY2l0eT0iLjEiLz48c3RvcCBvZmZzZXQ9IjMwJSIgc3RvcC1vcGFjaXR5PSIuMDciLz48c3RvcCBvZmZzZXQ9IjcwJSIgc3RvcC1vcGFjaXR5PSIuMDciLz48c3RvcCBvZmZzZXQ9IjExMCUiIHN0b3Atb3BhY2l0eT0iLjEiLz48YW5pbWF0ZSBhdHRyaWJ1dGVOYW1lPSJ4MSIgZnJvbT0iLTMwMCUiIHRvPSIxMjAwJSIgZHVyPSIzcyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiLz48YW5pbWF0ZSBhdHRyaWJ1dGVOYW1lPSJ4MiIgZnJvbT0iLTIwMCUiIHRvPSIxMzAwJSIgZHVyPSIzcyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cGF0aCBmaWxsPSJ1cmwoI2cpIiBkPSJNMjY4LDQ5OWMtNTEtMi0xMDYtMS0xNTMtMjItMjgtMTItMzktNDAtNDItNjgsMC00LDMtNywxLTEwLTUtNi0xNiwzLTEzLTE0LDItMTEsMTItMTQsMTEtMjcsMC0yLTUtMTItNS0xNiwwLTYsNS0xNyw0LTIyLTItNy05LTUtNi0xNSwzLTEwLDE0LTcsMTktMTMsNy0xMi0xNC0yNC0xNy0zMy0zLTEyLTEtMjgsMi0zOSwyOC0xMDEsMTQ4LTEzMywyMzktMTE1LDY0LDEzLDEzMCw1OSwxNDIsMTI3LDMsMTgsMCwzMi0xNSw0Mi0xLDEtMTEsMTMtNywxNiw0LDIsMjAsNCwyMiw5LDYsMTAtNywxNS05LDIyLTEsMywzLDExLDMsMTYsMCwyLTMsMTctMiwxOSwyLDIsOCwxLDEwLDQsMyw1LDQsMTYsNiwyMiw0LDEzLTE1LDIwLTE5LDI3LTksMjAsNSw0MC0yMyw2MC00MCwyOC0xMDEsMjktMTQ4LDMweiIvPjwvc3ZnPg==');"
+                                    alt="{{ item.name }}"
+                                    class="shop_order_image">
+                            </picture>
+                        </div>
+                        <div class="cafe-order-item-label">
+                            <div class="cafe-order-item-title">{{ item.name }} <span class="cafe-order-item-counter"><span
+                                            class="js-order-item-counter">1</span>x</span></div>
+                            <div class="cafe-order-item-description">{{ item.short_description }}</div>
+                        </div>
+                        <div class="cafe-order-item-price js-order-item-price">{{ item.price }}RUB</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <script src="https://tg.dev/js/jquery.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script type="text/javascript" src="{% static 'shop.js' %}"></script>
+</body>
+</html>
