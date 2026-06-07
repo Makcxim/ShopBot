@@ -50,14 +50,18 @@ ssh -R 9000:127.0.0.1:9000 user@your_domain
 
 ### Продакшн
 
+В проде используется `docker-compose.prod.yml` (gunicorn, `DJANGO_ENV=production`,
+без bind-mount кода). В `.env` обязательно задать `ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS`.
+
 1) Получить HTTPS-сертификат на сервер: [certbot](https://certbot.eff.org)
 2) Запустить:
 ```bash
-docker compose up -d --build
-docker compose exec web python manage.py migrate
-docker compose exec web python manage.py createsuperuser
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
 ```
-3) Настроить хостовой nginx — проксирует на `web` (`127.0.0.1:9000`), заменить `YOUR_DOMAIN`:
+(миграции и `collectstatic` выполняются автоматически при старте сервиса `web`)
+
+3) Настроить хостовой nginx — проксирует на `web` (`127.0.0.1:9000`), раздаёт static/media, заменить `YOUR_DOMAIN`:
 ```nginx
 server {
     listen 443 ssl;
@@ -68,6 +72,9 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/YOUR_DOMAIN/privkey.pem;
     include             /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    location /static/ { alias /path/to/ShopBot/shopbot/static/; }
+    location /media/  { alias /path/to/ShopBot/shopbot/media/; }
 
     location / {
         proxy_pass         http://127.0.0.1:9000;
