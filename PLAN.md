@@ -658,9 +658,9 @@ command: >
 | 12 | 2.8 | cart (session) + API | [x] |
 | 13 | 2.x | orders + shop_profile | [x] |
 | 14 | 2.9 | webapp.css + webapp.js | [x] |
-| 15 | 3.1-3.2 | panel base + dashboard (статистика) | [ ] |
-| 16 | 3.3 | panel CRUD products/keys | [ ] |
-| 17 | 3.4 | panel роли и доступ | [ ] |
+| 15 | 3.1-3.2 | panel base + dashboard (статистика) | [x] |
+| 16 | 3.3 | panel CRUD products/keys | [x] |
+| 17 | 3.4 | panel роли и доступ | [x] |
 | 18 | 4.1-4.2 | создание магазина + панель владельца | [ ] |
 | 19 | 4.3 | управление сотрудниками | [ ] |
 | 20 | 5 | settings split + прод-compose + деплой | [ ] |

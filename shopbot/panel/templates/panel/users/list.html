@@ -1,0 +1,29 @@
+{% extends 'panel/base.html' %}
+
+{% block title %}Пользователи — Панель{% endblock %}
+{% block heading %}Пользователи{% endblock %}
+
+{% block content %}
+<div class="table-wrap">
+    <table class="table align-middle mb-0">
+        <thead><tr><th>Username</th><th>Telegram ID</th><th>Telegram username</th><th>Роль</th><th>Регистрация</th></tr></thead>
+        <tbody>
+        {% for u in users %}
+            <tr>
+                <td>{{ u.username }}</td>
+                <td>{{ u.telegram_id }}</td>
+                <td>{{ u.telegram_username|default:"—" }}</td>
+                <td>
+                    {% if u.is_superuser %}<span class="badge text-bg-danger">admin</span>
+                    {% elif u.is_staff %}<span class="badge text-bg-warning">staff</span>
+                    {% else %}<span class="badge text-bg-secondary">user</span>{% endif %}
+                </td>
+                <td>{{ u.date_joined|date:"d.m.Y" }}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-4">Нет пользователей</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

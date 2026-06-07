@@ -1,0 +1,99 @@
+{% extends 'panel/base.html' %}
+
+{% block title %}Дашборд — Панель{% endblock %}
+{% block heading %}Дашборд{% endblock %}
+
+{% block content %}
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-card__label">Выручка (⭐)</div>
+        <div class="kpi-card__value">{{ revenue }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card__label">Заказов оплачено</div>
+        <div class="kpi-card__value">{{ orders_count }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card__label">Товаров</div>
+        <div class="kpi-card__value">{{ products_count }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card__label">Магазинов</div>
+        <div class="kpi-card__value">{{ shops_count }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card__label">Ключей в наличии</div>
+        <div class="kpi-card__value">{{ keys_available }}</div>
+    </div>
+    {% if users_count is not None %}
+    <div class="kpi-card">
+        <div class="kpi-card__label">Пользователей</div>
+        <div class="kpi-card__value">{{ users_count }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="panel-card">
+    <h2 class="panel-card__title">Выручка за 14 дней (⭐)</h2>
+    <canvas id="revenueChart" height="80"></canvas>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="panel-card">
+            <h2 class="panel-card__title">Топ товаров</h2>
+            {% if top_products %}
+            <table class="table table-sm align-middle mb-0">
+                <thead><tr><th>Товар</th><th class="text-end">Продано</th><th class="text-end">Выручка</th></tr></thead>
+                <tbody>
+                {% for p in top_products %}
+                    <tr><td>{{ p.product__name }}</td><td class="text-end">{{ p.qty }}</td><td class="text-end">{{ p.revenue }} ⭐</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}<p class="text-muted mb-0">Пока нет продаж</p>{% endif %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="panel-card">
+            <h2 class="panel-card__title">Последние заказы</h2>
+            {% if recent_orders %}
+            <table class="table table-sm align-middle mb-0">
+                <thead><tr><th>#</th><th>Покупатель</th><th>Статус</th><th class="text-end">Сумма</th></tr></thead>
+                <tbody>
+                {% for o in recent_orders %}
+                    <tr>
+                        <td><a href="{% url 'panel_order_detail' o.pk %}">{{ o.pk }}</a></td>
+                        <td>{{ o.buyer }}</td>
+                        <td><span class="badge text-bg-secondary">{{ o.get_status_display }}</span></td>
+                        <td class="text-end">{{ o.total_stars }} ⭐</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}<p class="text-muted mb-0">Заказов нет</p>{% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const ctx = document.getElementById('revenueChart');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Выручка ⭐',
+                data: {{ chart_data|safe }},
+                borderColor: '#4b6cff',
+                backgroundColor: 'rgba(75,108,255,.12)',
+                fill: true, tension: .3
+            }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+</script>
+{% endblock %}

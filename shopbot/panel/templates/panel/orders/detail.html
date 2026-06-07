@@ -1,0 +1,39 @@
+{% extends 'panel/base.html' %}
+
+{% block title %}Заказ #{{ order.pk }} — Панель{% endblock %}
+{% block heading %}Заказ #{{ order.pk }}{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="max-width: 820px;">
+    <div class="row mb-3">
+        <div class="col-sm-6"><strong>Покупатель:</strong> {{ order.buyer }}</div>
+        <div class="col-sm-6"><strong>Статус:</strong> <span class="badge text-bg-secondary">{{ order.get_status_display }}</span></div>
+        <div class="col-sm-6"><strong>Дата:</strong> {{ order.created_at|date:"d.m.Y H:i" }}</div>
+        <div class="col-sm-6"><strong>Сумма:</strong> {{ order.total_stars }} ⭐</div>
+        {% if order.telegram_payment_charge_id %}
+        <div class="col-12 mt-2"><strong>Charge ID:</strong> <code>{{ order.telegram_payment_charge_id }}</code></div>
+        {% endif %}
+    </div>
+
+    <h2 class="panel-card__title">Позиции</h2>
+    <table class="table align-middle">
+        <thead><tr><th>Товар</th><th>Магазин</th><th class="text-end">Кол-во</th><th class="text-end">Цена</th></tr></thead>
+        <tbody>
+        {% for item in items %}
+            <tr>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.shop.name }}</td>
+                <td class="text-end">{{ item.quantity }}</td>
+                <td class="text-end">{{ item.price_stars }} ⭐</td>
+            </tr>
+            {% if item.delivered_keys %}
+            <tr><td colspan="4" class="bg-light">
+                {% for key in item.delivered_keys %}<code class="d-block">{{ key }}</code>{% endfor %}
+            </td></tr>
+            {% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
+    <a href="{% url 'panel_orders' %}" class="btn btn-outline-secondary">К заказам</a>
+</div>
+{% endblock %}

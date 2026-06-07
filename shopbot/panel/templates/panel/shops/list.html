@@ -1,0 +1,25 @@
+{% extends 'panel/base.html' %}
+
+{% block title %}Магазины — Панель{% endblock %}
+{% block heading %}Магазины{% endblock %}
+
+{% block content %}
+<div class="table-wrap">
+    <table class="table align-middle mb-0">
+        <thead><tr><th>Название</th><th>Товаров</th><th>Проверен</th><th>Активен</th><th></th></tr></thead>
+        <tbody>
+        {% for s in shops %}
+            <tr>
+                <td>{{ s.name }}</td>
+                <td>{{ s.products_count }}</td>
+                <td>{% if s.is_verified %}<span class="badge text-bg-success">да</span>{% else %}<span class="badge text-bg-warning">нет</span>{% endif %}</td>
+                <td>{% if s.is_active %}<span class="badge text-bg-success">да</span>{% else %}<span class="badge text-bg-secondary">нет</span>{% endif %}</td>
+                <td class="text-end"><a href="{% url 'panel_shop_detail' s.pk %}" class="btn btn-outline-primary btn-sm">Открыть</a></td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-4">Магазинов нет</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

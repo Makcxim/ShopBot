@@ -49,6 +49,9 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'webapp.TelegramUser'
 
+# Панель использует логин Django-админки для супер-админа
+LOGIN_URL = '/admin/login/'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
