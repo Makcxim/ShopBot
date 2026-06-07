@@ -19,11 +19,9 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from bot import urls as bot_urls
 from webapp import urls as webapp_urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include(webapp_urls)),
-    path('', include(bot_urls)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

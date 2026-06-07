@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Корзина — Маркетплейс ключей{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Корзина</h1>
+
+{% if items %}
+<div class="cart-list">
+    {% for entry in items %}
+    <div class="cart-item" data-product-id="{{ entry.product.id }}">
+        <div class="cart-item__photo">
+            {% if entry.product.image %}
+                <img src="{{ entry.product.image.url }}" alt="{{ entry.product.name }}">
+            {% else %}
+                <div class="cart-item__placeholder">🎮</div>
+            {% endif %}
+        </div>
+        <div class="cart-item__body">
+            <div class="cart-item__title">{{ entry.product.name }}</div>
+            <div class="cart-item__meta">{{ entry.quantity }} × {{ entry.product.price_stars }} ⭐</div>
+        </div>
+        <div class="cart-item__right">
+            <div class="cart-item__subtotal">{{ entry.subtotal }} ⭐</div>
+            <button type="button" class="cart-item__remove" data-product-id="{{ entry.product.id }}">Удалить</button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="cart-summary">
+    <div class="cart-summary__row">
+        <span>Итого</span>
+        <span class="cart-summary__total">{{ total }} ⭐</span>
+    </div>
+    <button type="button" class="btn-buy" id="checkout-btn">Оплатить {{ total }} ⭐</button>
+</div>
+{% else %}
+    {% include 'includes/empty_state.html' with icon="🛒" title="Корзина пуста" subtitle="Добавьте товары из каталога" %}
+{% endif %}
+{% endblock %}

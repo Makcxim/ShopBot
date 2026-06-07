@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ shop.name }} — Маркетплейс ключей{% endblock %}
+
+{% block content %}
+<div class="shop-header">
+    <div class="shop-header__logo">
+        {% if shop.logo %}
+            <img src="{{ shop.logo.url }}" alt="{{ shop.name }}">
+        {% else %}
+            <div class="shop-header__placeholder">🏪</div>
+        {% endif %}
+    </div>
+    <h1 class="shop-header__name">
+        {{ shop.name }}{% if shop.is_verified %} <span class="verified">✓</span>{% endif %}
+    </h1>
+    {% if shop.description %}
+        <p class="shop-header__desc">{{ shop.description }}</p>
+    {% endif %}
+</div>
+
+<h2 class="section-title">Товары</h2>
+{% if products %}
+<div class="product-grid">
+    {% for item in products %}
+        {% include 'includes/product_card.html' %}
+    {% endfor %}
+</div>
+{% else %}
+    {% include 'includes/empty_state.html' with icon="📭" title="В магазине пока нет товаров" %}
+{% endif %}
+{% endblock %}

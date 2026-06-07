@@ -1,0 +1,20 @@
+<a href="{% url 'product_detail' item.shop.slug item.slug %}" class="product-card">
+    <div class="product-card__photo">
+        {% if item.image %}
+            <img src="{{ item.image.url }}" alt="{{ item.name }}" loading="lazy">
+        {% else %}
+            <div class="product-card__placeholder">🎮</div>
+        {% endif %}
+        {% if not item.in_stock %}<span class="product-card__badge">Нет в наличии</span>{% endif %}
+    </div>
+    <div class="product-card__body">
+        <div class="product-card__title">{{ item.name }}</div>
+        {% if item.short_description %}
+            <div class="product-card__desc">{{ item.short_description }}</div>
+        {% endif %}
+        <div class="product-card__footer">
+            <span class="product-card__price">{{ item.price_stars }} ⭐</span>
+            <span class="product-card__shop">{{ item.shop.name }}</span>
+        </div>
+    </div>
+</a>

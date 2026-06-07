@@ -1,6 +1,4 @@
-import asyncio
 import json
-from concurrent.futures import ThreadPoolExecutor
 
 from aiogram import Bot, F, Router, types
 from aiogram.enums import ContentType
@@ -9,116 +7,129 @@ from aiogram.types import Message, PreCheckoutQuery, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from asgiref.sync import sync_to_async
 from decouple import config
-from django.core.management import call_command
+from django.db import transaction
+from django.utils import timezone
 
-from webapp.models import ShopOrder, ShopProduct, ShopProductKey
+from webapp.models import Order, OrderItem, Product, ProductKey, TelegramUser
 
 router = Router(name=__name__)
 
 
 @router.message(Command("help", "start"))
 async def command_start_handler(message: Message):
-
     APP_BASE_URL = config('APP_BASE_URL', default='https://google.com')
     MAIN_PAGE_URL = config('MAIN_PAGE_URL', default='main_page')
 
-    # kb = [[types.KeyboardButton(text="переход", web_app=WebAppInfo(url=f"{APP_BASE_URL}/{MAIN_PAGE_URL}"))]]
-    # markup = types.ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
-
     builder = InlineKeyboardBuilder()
     builder.row(types.InlineKeyboardButton(
-        text="Открыть магазин", web_app=WebAppInfo(url=f"{APP_BASE_URL}/{MAIN_PAGE_URL}"))
+        text="Открыть магазин",
+        web_app=WebAppInfo(url=f"{APP_BASE_URL}/{MAIN_PAGE_URL}"),
+    ))
+    await message.answer(
+        "Вас приветствует маркетплейс цифровых ключей! Покупайте ключи за Telegram Stars ⭐",
+        reply_markup=builder.as_markup(),
     )
-    await message.answer("Вам привествует магазин КЛЮЧНИК покупайте ключи стим только у нас!", reply_markup=builder.as_markup())
-
 
 
 @router.pre_checkout_query()
 async def pre_checkout_query(pre_checkout_query: PreCheckoutQuery, bot: Bot):
+    """Перед оплатой проверяем, что ключей хватает на все позиции заказа."""
     payload = json.loads(pre_checkout_query.invoice_payload)
 
-    for item in payload:
-        product_id = item['id']
-        amount = item['amount']
-        keys = await get_product_keys_by_id(product_id, amount)
-        if len(keys) < amount:
-            await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=False, error_message="Недостаточно ключей! Обратитесь в поддержку!")
-            return
+    ok = await sync_to_async(_has_enough_keys)(payload)
+    if not ok:
+        await bot.answer_pre_checkout_query(
+            pre_checkout_query.id, ok=False,
+            error_message="Недостаточно ключей! Обратитесь в поддержку.",
+        )
+        return
 
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
-async def get_product_by_id(product_id):
-    # Получение продукта по id
-    return await sync_to_async(ShopProduct.objects.get)(id=product_id)
-
-
-async def update_bought_keys(keys):
-    # Обновление статуса ключей
-    await sync_to_async(ShopProductKey.objects.filter(key__in=keys).update, thread_sensitive=True)(is_sold=True)
-
-
-async def get_product_keys_by_id(product_id, amount):
-    # Получение ключей продукта
-    keys = await sync_to_async(list)(
-        ShopProductKey.objects.filter(product=product_id, is_sold=False).values_list('key', flat=True)[:amount]
-    )
-
-    return keys
-
-
 @router.message(F.content_type == ContentType.SUCCESSFUL_PAYMENT)
 async def successful_payment(message: Message):
-    # list of dicts id=product_id, amount=product_amount
-    payload = json.loads(message.successful_payment.invoice_payload)  
+    """Создаёт заказ, выдаёт ключи и отправляет их покупателю."""
+    sp = message.successful_payment
+    payload = json.loads(sp.invoice_payload)
 
-    thx_msg = (
-        f"Спасибо за покупку на "
-        f"{message.successful_payment.total_amount // 100} "
-        f"{message.successful_payment.currency}!\n"
+    thx_msg, keys_msg = await sync_to_async(_process_payment)(
+        telegram_id=message.from_user.id,
+        telegram_username=message.from_user.username or '',
+        full_name=message.from_user.full_name,
+        payload=payload,
+        total_stars=sp.total_amount,            # для XTR это целое число звёзд
+        charge_id=sp.telegram_payment_charge_id,
     )
-    msg = 'Ваши ключи:\n'
 
-    for _, i in enumerate(payload):
-        product = await get_product_by_id(i['id'])
-        thx_msg += (
-            f"{_+1}) {product.name} - "
-            f"{i['amount']} шт. по цене {product.price}\n"
-        )
-        keys = await get_product_keys_by_id(i['id'], i['amount'])
-        for __, key in enumerate(keys):
-            msg += f"Ключ №{__+1} от {product.name}: {key}\n"
-    
     await message.answer(thx_msg)
-    await message.answer(msg)
-
-    await update_bought_keys(list(keys))
-
-    await write_success_payment_to_db(message.from_user.id, payload)
-
-    await run_command_in_thread()
+    await message.answer(keys_msg)
 
 
-async def write_success_payment_to_db(telegram_id, payload):
+def _has_enough_keys(payload):
+    for item in payload:
+        available = ProductKey.objects.filter(
+            product_id=item['product_id'], is_sold=False
+        ).count()
+        if available < int(item['quantity']):
+            return False
+    return True
 
-    for prod in payload:
-        product = await get_product_by_id(prod['id'])
 
-        order = ShopOrder(
-            telegram_id=telegram_id,
+@transaction.atomic
+def _process_payment(telegram_id, telegram_username, full_name, payload, total_stars, charge_id):
+    """Синхронная обработка успешной оплаты в одной транзакции."""
+    buyer, _ = TelegramUser.objects.get_or_create(
+        telegram_id=telegram_id,
+        defaults={
+            'username': telegram_username or f'tg_{telegram_id}',
+            'telegram_username': telegram_username,
+        },
+    )
+
+    order = Order.objects.create(
+        buyer=buyer,
+        status=Order.Status.PAID,
+        total_stars=total_stars,
+        telegram_payment_charge_id=charge_id,
+    )
+
+    thx_msg = f"Спасибо за покупку на {total_stars} ⭐!\n"
+    keys_msg = "Ваши ключи:\n"
+
+    for index, item in enumerate(payload, start=1):
+        product = Product.objects.get(id=item['product_id'])
+        quantity = int(item['quantity'])
+
+        order_item = OrderItem.objects.create(
+            order=order,
             product=product,
-            count=prod['amount'],
-            total_price=product.price * prod['amount'],
+            shop=product.shop,
+            quantity=quantity,
+            price_stars=product.price_stars,
         )
 
-        await sync_to_async(order.save)()
+        # Резервируем свободные ключи
+        keys = list(
+            ProductKey.objects.select_for_update()
+            .filter(product=product, is_sold=False)[:quantity]
+        )
+        key_values = [k.key for k in keys]
 
+        for key in keys:
+            key.is_sold = True
+            key.sold_at = timezone.now()
+            key.order_item = order_item
+            key.save(update_fields=['is_sold', 'sold_at', 'order_item'])
 
-async def run_command_in_thread():
-    with ThreadPoolExecutor() as executor:
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(executor, 
-                                   call_command, 
-                                   'update_remain_keys'
-                                   )
+        order_item.delivered_keys = key_values
+        order_item.save(update_fields=['delivered_keys'])
 
+        thx_msg += f"{index}) {product.name} — {quantity} шт. по {product.price_stars} ⭐\n"
+        for n, key in enumerate(key_values, start=1):
+            keys_msg += f"Ключ №{n} от {product.name}: {key}\n"
+
+    order.status = Order.Status.DELIVERED
+    order.save(update_fields=['status'])
+
+    return thx_msg, keys_msg

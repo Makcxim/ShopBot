@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }} — Маркетплейс ключей{% endblock %}
+
+{% block content %}
+<div class="product-detail">
+    <div class="product-detail__photo">
+        {% if product.image %}
+            <img src="{{ product.image.url }}" alt="{{ product.name }}">
+        {% else %}
+            <div class="product-detail__placeholder">🎮</div>
+        {% endif %}
+    </div>
+
+    <h1 class="product-detail__title">{{ product.name }}</h1>
+
+    <a href="{% url 'shop_profile' product.shop.slug %}" class="product-detail__shop">
+        🏪 {{ product.shop.name }}{% if product.shop.is_verified %} <span class="verified">✓</span>{% endif %}
+    </a>
+
+    {% if product.category %}
+        <span class="product-detail__category">{{ product.category.name }}</span>
+    {% endif %}
+
+    <div class="product-detail__price">{{ product.price_stars }} ⭐</div>
+
+    <div class="product-detail__stock {% if product.in_stock %}in{% else %}out{% endif %}">
+        {% if product.in_stock %}В наличии: {{ product.stock }} шт.{% else %}Нет в наличии{% endif %}
+    </div>
+
+    {% if product.description %}
+        <div class="product-detail__description">{{ product.description|linebreaksbr }}</div>
+    {% endif %}
+
+    {% if product.in_stock %}
+    <div class="qty-control" data-max="{{ product.stock }}">
+        <button type="button" class="qty-control__btn" data-action="dec">−</button>
+        <span class="qty-control__value" id="qty-value">1</span>
+        <button type="button" class="qty-control__btn" data-action="inc">+</button>
+    </div>
+    <button type="button" class="btn-buy" id="add-to-cart-btn" data-product-id="{{ product.id }}">
+        Добавить в корзину
+    </button>
+    {% else %}
+    <button type="button" class="btn-buy" disabled>Нет в наличии</button>
+    {% endif %}
+</div>
+
+{% if other_products %}
+<section class="other-products">
+    <h2 class="section-title">Ещё из магазина «{{ product.shop.name }}»</h2>
+    <div class="product-grid">
+        {% for item in other_products %}
+            {% include 'includes/product_card.html' %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

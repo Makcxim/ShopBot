@@ -40,10 +40,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
+    'rest_framework',
     'shopbot',
-    'bot',
     'webapp',
+    'bot',
+    'panel',
 ]
+
+AUTH_USER_MODEL = 'webapp.TelegramUser'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

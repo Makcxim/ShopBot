@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои заказы — Маркетплейс ключей{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Мои заказы</h1>
+
+{% if not request.user.is_authenticated %}
+    {% include 'includes/empty_state.html' with icon="🔐" title="Войдите через Telegram" subtitle="Заказы доступны после авторизации в приложении" %}
+{% elif orders %}
+<div class="order-list">
+    {% for order in orders %}
+    <div class="order-card">
+        <div class="order-card__head">
+            <span class="order-card__id">Заказ #{{ order.id }}</span>
+            <span class="order-card__status status--{{ order.status }}">{{ order.get_status_display }}</span>
+        </div>
+        <div class="order-card__date">{{ order.created_at|date:"d.m.Y H:i" }}</div>
+        <ul class="order-card__items">
+            {% for item in order.items.all %}
+            <li>
+                <span>{{ item.product.name }} × {{ item.quantity }}</span>
+                <span>{{ item.price_stars }} ⭐</span>
+            </li>
+            {% if item.delivered_keys %}
+                <li class="order-card__keys">
+                    {% for key in item.delivered_keys %}<code>{{ key }}</code>{% endfor %}
+                </li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+        <div class="order-card__total">Итого: {{ order.total_stars }} ⭐</div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+    {% include 'includes/empty_state.html' with icon="📦" title="Заказов пока нет" subtitle="Ваши покупки появятся здесь" %}
+{% endif %}
+{% endblock %}

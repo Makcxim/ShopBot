@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Каталог — Маркетплейс ключей{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Каталог</h1>
+
+{% if categories %}
+<div class="category-chips">
+    <a href="{% url 'catalog' %}" class="chip {% if not current_category %}is-active{% endif %}">Все</a>
+    {% for category in categories %}
+        <a href="{% url 'catalog_by_category' category.slug %}"
+           class="chip {% if current_category.id == category.id %}is-active{% endif %}">
+            {% if category.icon %}{{ category.icon }} {% endif %}{{ category.name }}
+        </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if products %}
+<div class="product-grid">
+    {% for item in products %}
+        {% include 'includes/product_card.html' %}
+    {% endfor %}
+</div>
+{% else %}
+    {% include 'includes/empty_state.html' with icon="📭" title="Товары не найдены" subtitle="Загляните позже" %}
+{% endif %}
+{% endblock %}
