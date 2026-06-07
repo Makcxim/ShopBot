@@ -33,6 +33,11 @@ def is_owner(user, shop):
     ).exists()
 
 
+def can_manage(user, shop):
+    """Может управлять магазином (владелец или суперадмин)."""
+    return is_owner(user, shop)
+
+
 def panel_required(view_func):
     """Требует вход + доступ к панели (суперадмин или участник магазина)."""
 

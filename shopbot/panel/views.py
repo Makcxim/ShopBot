@@ -1,16 +1,21 @@
 import json
 from datetime import timedelta
 
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, ExpressionWrapper, F, IntegerField, Sum
 from django.db.models.functions import TruncDate
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from webapp.models import Order, OrderItem, Product, ProductKey, Shop, TelegramUser
+from webapp.models import (
+    Order, OrderItem, Product, ProductKey, Shop, ShopMembership, TelegramUser,
+)
 
-from .access import is_owner, panel_required, shops_for
-from .forms import KeysUploadForm, ProductForm
+from .access import can_manage, is_owner, panel_required, shops_for
+from .forms import (
+    KeysUploadForm, MemberAddForm, ProductForm, ShopForm, unique_shop_slug,
+)
 
 PAID = [Order.Status.PAID, Order.Status.DELIVERED]
 REVENUE_EXPR = ExpressionWrapper(
@@ -199,3 +204,74 @@ def user_list_view(request):
         raise PermissionDenied('Только для супер-админа')
     users = TelegramUser.objects.order_by('-date_joined')
     return render(request, 'panel/users/list.html', {'active': 'users', 'users': users})
+
+
+@login_required
+def shop_create_view(request):
+    """Создание магазина — доступно любому авторизованному пользователю."""
+    form = ShopForm(request.POST or None, request.FILES or None)
+    if request.method == 'POST' and form.is_valid():
+        shop = form.save(commit=False)
+        shop.slug = unique_shop_slug(shop.name)
+        shop.is_verified = False
+        shop.save()
+        ShopMembership.objects.create(
+            user=request.user, shop=shop, role=ShopMembership.Role.OWNER
+        )
+        return redirect('panel_shop_detail', pk=shop.pk)
+    return render(request, 'panel/shops/form.html', {'active': 'shops', 'form': form})
+
+
+@panel_required
+def shop_verify_view(request, pk):
+    """Верификация магазина — только супер-админ."""
+    if not request.user.is_superuser:
+        raise PermissionDenied('Только для супер-админа')
+    shop = get_object_or_404(Shop, pk=pk)
+    if request.method == 'POST':
+        shop.is_verified = not shop.is_verified
+        shop.save(update_fields=['is_verified'])
+    return redirect('panel_shop_detail', pk=shop.pk)
+
+
+@panel_required
+def shop_members_view(request, pk):
+    """Управление сотрудниками — владелец или супер-админ."""
+    shop = get_object_or_404(shops_for(request.user), pk=pk)
+    if not can_manage(request.user, shop):
+        raise PermissionDenied('Только владелец магазина')
+
+    form = MemberAddForm(request.POST or None)
+    error = None
+    if request.method == 'POST' and form.is_valid():
+        identifier = form.cleaned_data['identifier'].strip().lstrip('@')
+        if identifier.isdigit():
+            user = TelegramUser.objects.filter(telegram_id=int(identifier)).first()
+        else:
+            user = TelegramUser.objects.filter(telegram_username__iexact=identifier).first()
+        if not user:
+            error = 'Пользователь не найден'
+        else:
+            ShopMembership.objects.update_or_create(
+                user=user, shop=shop,
+                defaults={'role': form.cleaned_data['role']},
+            )
+            return redirect('panel_shop_members', pk=shop.pk)
+
+    return render(request, 'panel/shops/members.html', {
+        'active': 'shops', 'shop': shop, 'form': form, 'error': error,
+        'members': shop.memberships.select_related('user'),
+    })
+
+
+@panel_required
+def member_remove_view(request, pk, membership_id):
+    """Удаление сотрудника из магазина."""
+    shop = get_object_or_404(shops_for(request.user), pk=pk)
+    if not can_manage(request.user, shop):
+        raise PermissionDenied('Только владелец магазина')
+    if request.method == 'POST':
+        ShopMembership.objects.filter(
+            id=membership_id, shop=shop, role=ShopMembership.Role.STAFF
+        ).delete()
+    return redirect('panel_shop_members', pk=shop.pk)

@@ -12,6 +12,10 @@ urlpatterns = [
     path('panel/orders/', views.order_list_view, name='panel_orders'),
     path('panel/orders/<int:pk>/', views.order_detail_view, name='panel_order_detail'),
     path('panel/shops/', views.shop_list_view, name='panel_shops'),
+    path('panel/shops/create/', views.shop_create_view, name='panel_shop_create'),
     path('panel/shops/<int:pk>/', views.shop_detail_view, name='panel_shop_detail'),
+    path('panel/shops/<int:pk>/verify/', views.shop_verify_view, name='panel_shop_verify'),
+    path('panel/shops/<int:pk>/members/', views.shop_members_view, name='panel_shop_members'),
+    path('panel/shops/<int:pk>/members/<int:membership_id>/remove/', views.member_remove_view, name='panel_member_remove'),
     path('panel/users/', views.user_list_view, name='panel_users'),
 ]

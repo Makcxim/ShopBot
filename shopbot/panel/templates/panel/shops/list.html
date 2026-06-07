@@ -4,6 +4,9 @@
 {% block heading %}Магазины{% endblock %}
 
 {% block content %}
+<div class="d-flex justify-content-end mb-3">
+    <a href="{% url 'panel_shop_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Создать магазин</a>
+</div>
 <div class="table-wrap">
     <table class="table align-middle mb-0">
         <thead><tr><th>Название</th><th>Товаров</th><th>Проверен</th><th>Активен</th><th></th></tr></thead>

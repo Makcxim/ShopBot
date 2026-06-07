@@ -36,4 +36,10 @@
 {% else %}
     {% include 'includes/empty_state.html' with icon="📦" title="Заказов пока нет" subtitle="Ваши покупки появятся здесь" %}
 {% endif %}
+
+{% if request.user.is_authenticated %}
+<div class="text-center mt-4">
+    <a href="/panel/shops/create/" class="seller-link">🏪 Стать продавцом</a>
+</div>
+{% endif %}
 {% endblock %}

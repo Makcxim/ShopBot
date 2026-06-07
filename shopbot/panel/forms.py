@@ -1,7 +1,17 @@
 from django import forms
 from django.utils.text import slugify
 
-from webapp.models import Product
+from webapp.models import Product, Shop, ShopMembership
+
+
+def unique_shop_slug(name):
+    base = slugify(name) or 'shop'
+    slug = base
+    i = 2
+    while Shop.objects.filter(slug=slug).exists():
+        slug = f'{base}-{i}'
+        i += 1
+    return slug
 
 
 class ProductForm(forms.ModelForm):
@@ -34,6 +44,30 @@ class ProductForm(forms.ModelForm):
         if not slug:
             slug = slugify(self.cleaned_data.get('name', ''))
         return slug
+
+
+class ShopForm(forms.ModelForm):
+    class Meta:
+        model = Shop
+        fields = ['name', 'description', 'logo']
+        widgets = {'description': forms.Textarea(attrs={'rows': 3})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = (field.widget.attrs.get('class', '') + ' form-control').strip()
+
+
+class MemberAddForm(forms.Form):
+    """Добавление сотрудника по telegram_id или username."""
+    identifier = forms.CharField(
+        label='Telegram ID или username',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '123456789 или username'}),
+    )
+    role = forms.ChoiceField(
+        choices=ShopMembership.Role.choices,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
 
 
 class KeysUploadForm(forms.Form):

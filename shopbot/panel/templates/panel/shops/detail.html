@@ -4,6 +4,20 @@
 {% block heading %}{{ shop.name }}{% endblock %}
 
 {% block content %}
+<div class="d-flex gap-2 mb-3">
+    {% if is_owner %}
+        <a href="{% url 'panel_shop_members' shop.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> Сотрудники</a>
+    {% endif %}
+    {% if request.user.is_superuser %}
+        <form method="post" action="{% url 'panel_shop_verify' shop.pk %}">
+            {% csrf_token %}
+            <button class="btn btn-sm {% if shop.is_verified %}btn-outline-warning{% else %}btn-success{% endif %}">
+                {% if shop.is_verified %}Снять проверку{% else %}Подтвердить магазин{% endif %}
+            </button>
+        </form>
+    {% endif %}
+</div>
+
 <div class="kpi-grid">
     <div class="kpi-card"><div class="kpi-card__label">Выручка (⭐)</div><div class="kpi-card__value">{{ revenue }}</div></div>
     <div class="kpi-card"><div class="kpi-card__label">Заказов</div><div class="kpi-card__value">{{ orders_count }}</div></div>
