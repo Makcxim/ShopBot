@@ -5,6 +5,15 @@
 {% block content %}
 <h1 class="page-title">Каталог</h1>
 
+<form method="get" class="search-bar" action="{% if current_category %}{% url 'catalog_by_category' current_category.slug %}{% else %}{% url 'catalog' %}{% endif %}">
+    <input type="search" name="q" value="{{ query }}" placeholder="Поиск товаров…" class="search-bar__input">
+    <select name="sort" class="search-bar__sort" onchange="this.form.submit()">
+        <option value="new" {% if sort == 'new' %}selected{% endif %}>Сначала новые</option>
+        <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Дешевле</option>
+        <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Дороже</option>
+    </select>
+</form>
+
 {% if categories %}
 <div class="category-chips">
     <a href="{% url 'catalog' %}" class="chip {% if not current_category %}is-active{% endif %}">Все</a>
@@ -23,7 +32,24 @@
         {% include 'includes/product_card.html' %}
     {% endfor %}
 </div>
+
+{% if page_obj.has_other_pages %}
+<nav class="pagination-bar">
+    {% if page_obj.has_previous %}
+        <a class="page-btn" href="?{% if extra_params %}{{ extra_params }}&{% endif %}page={{ page_obj.previous_page_number }}">‹</a>
+    {% endif %}
+    <span class="page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+        <a class="page-btn" href="?{% if extra_params %}{{ extra_params }}&{% endif %}page={{ page_obj.next_page_number }}">›</a>
+    {% endif %}
+</nav>
+{% endif %}
+
 {% else %}
-    {% include 'includes/empty_state.html' with icon="📭" title="Товары не найдены" subtitle="Загляните позже" %}
+    {% if query %}
+        {% include 'includes/empty_state.html' with icon="🔍" title="Ничего не найдено" subtitle="Попробуйте изменить запрос" %}
+    {% else %}
+        {% include 'includes/empty_state.html' with icon="📭" title="Товары не найдены" subtitle="Загляните позже" %}
+    {% endif %}
 {% endif %}
 {% endblock %}

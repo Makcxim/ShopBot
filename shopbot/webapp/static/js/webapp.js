@@ -74,6 +74,39 @@
         }
     }
 
+    function haptic(type) {
+        if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred(type || 'light');
+    }
+
+    function isRootPage() {
+        const p = window.location.pathname;
+        return p === '/' || p === '/main_page' || p.indexOf('/category/') === 0;
+    }
+
+    // ===== Кнопка «Назад» (нативная в Telegram, fallback в браузере) =====
+    function initBack() {
+        const root = isRootPage();
+        const goBack = function () {
+            if (window.history.length > 1) window.history.back();
+            else window.location.href = '/';
+        };
+        if (tg && tg.BackButton) {
+            if (root) {
+                tg.BackButton.hide();
+            } else {
+                tg.BackButton.show();
+                tg.BackButton.onClick(goBack);
+            }
+        } else {
+            // Браузер без Telegram
+            const link = document.getElementById('back-link');
+            if (link && !root) {
+                link.classList.remove('d-none');
+                link.addEventListener('click', function (e) { e.preventDefault(); goBack(); });
+            }
+        }
+    }
+
     // ===== Количество на странице товара =====
     function initQtyControl() {
         const control = document.querySelector('.qty-control');
@@ -101,6 +134,7 @@
             post('/api/cart/add/', { product_id: productId, quantity: quantity })
                 .then(function (data) {
                     updateCartBadge(data.cart_count);
+                    haptic('medium');
                     toast('Добавлено в корзину');
                 })
                 .catch(function () { toast('Не удалось добавить'); });
@@ -124,43 +158,98 @@
         });
     }
 
+    // ===== Изменение количества в корзине =====
+    function updateMainButtonText(total) {
+        const btn = document.getElementById('checkout-btn');
+        if (btn) btn.textContent = 'Оплатить ' + total + ' ⭐';
+        if (tg && tg.MainButton) tg.MainButton.setText('Оплатить ' + total + ' ⭐');
+    }
+
+    function initCartQty() {
+        document.querySelectorAll('.cart-qty').forEach(function (ctrl) {
+            const productId = parseInt(ctrl.dataset.productId, 10);
+            const max = parseInt(ctrl.dataset.max || '99', 10);
+            const valueEl = ctrl.querySelector('.cart-qty__value');
+            ctrl.addEventListener('click', function (e) {
+                const b = e.target.closest('.cart-qty__btn');
+                if (!b) return;
+                let q = parseInt(valueEl.textContent, 10) + (b.dataset.action === 'inc' ? 1 : -1);
+                q = Math.min(Math.max(q, 0), max);
+                post('/api/cart/set/', { product_id: productId, quantity: q })
+                    .then(function (data) {
+                        updateCartBadge(data.cart_count);
+                        if (data.quantity < 1) {
+                            location.reload();
+                            return;
+                        }
+                        valueEl.textContent = data.quantity;
+                        const row = ctrl.closest('.cart-item');
+                        const sub = row && row.querySelector('.cart-item__subtotal');
+                        if (sub) sub.textContent = data.subtotal + ' ⭐';
+                        const totalEl = document.getElementById('cart-total');
+                        if (totalEl) totalEl.textContent = data.total;
+                        updateMainButtonText(data.total);
+                    })
+                    .catch(function () { toast('Ошибка'); });
+            });
+        });
+    }
+
     // ===== Оплата (Telegram Stars) =====
+    function doCheckout(onDone) {
+        post('/api/create-invoice/', {})
+            .then(function (data) {
+                if (!data.invoice_link) throw data;
+                if (tg && tg.openInvoice) {
+                    tg.openInvoice(data.invoice_link, function (status) {
+                        if (status === 'paid') {
+                            post('/api/cart/clear/', {}).finally(function () {
+                                window.location.href = '/orders/';
+                            });
+                        } else if (onDone) {
+                            onDone();
+                        }
+                    });
+                } else {
+                    window.open(data.invoice_link, '_blank');
+                    if (onDone) onDone();
+                }
+            })
+            .catch(function (err) {
+                toast((err && err.detail) ? err.detail : 'Не удалось оформить заказ');
+                if (onDone) onDone();
+            });
+    }
+
     function initCheckout() {
         const btn = document.getElementById('checkout-btn');
         if (!btn) return;
+
+        // In-page кнопка (видна в браузере и как fallback)
         btn.addEventListener('click', function () {
             btn.disabled = true;
-            post('/api/create-invoice/', {})
-                .then(function (data) {
-                    if (!data.invoice_link) throw data;
-                    if (tg && tg.openInvoice) {
-                        tg.openInvoice(data.invoice_link, function (status) {
-                            if (status === 'paid') {
-                                post('/api/cart/clear/', {}).finally(function () {
-                                    window.location.href = '/orders/';
-                                });
-                            } else {
-                                btn.disabled = false;
-                            }
-                        });
-                    } else {
-                        // Браузер без Telegram — просто открываем ссылку
-                        window.open(data.invoice_link, '_blank');
-                        btn.disabled = false;
-                    }
-                })
-                .catch(function (err) {
-                    toast((err && err.detail) ? err.detail : 'Не удалось оформить заказ');
-                    btn.disabled = false;
-                });
+            doCheckout(function () { btn.disabled = false; });
         });
+
+        // Нативная MainButton в Telegram
+        if (tg && tg.MainButton) {
+            tg.MainButton.setText(btn.textContent.trim());
+            tg.MainButton.show();
+            tg.MainButton.onClick(function () {
+                tg.MainButton.showProgress();
+                doCheckout(function () { tg.MainButton.hideProgress(); });
+            });
+            btn.classList.add('d-none');  // прячем дублирующую кнопку в Telegram
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
         initTelegram();
+        initBack();
         initQtyControl();
         initAddToCart();
         initCartRemove();
+        initCartQty();
         initCheckout();
     });
 })();

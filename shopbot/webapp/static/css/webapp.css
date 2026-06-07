@@ -54,6 +54,29 @@ a { color: inherit; text-decoration: none; }
     display: flex; align-items: center; justify-content: center;
 }
 
+/* ===== Back link (браузерный fallback) ===== */
+.back-link { display: inline-block; margin-bottom: 12px; color: var(--link); font-weight: 600; font-size: .9rem; }
+
+/* ===== Search bar ===== */
+.search-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+.search-bar__input {
+    flex: 1; border: none; border-radius: 10px; padding: 10px 14px;
+    background: var(--card-bg); color: var(--text); font-size: .9rem;
+}
+.search-bar__input:focus { outline: 2px solid var(--button); }
+.search-bar__sort {
+    border: none; border-radius: 10px; padding: 0 10px;
+    background: var(--card-bg); color: var(--text); font-size: .85rem;
+}
+
+/* ===== Pagination ===== */
+.pagination-bar { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 20px; }
+.page-btn {
+    background: var(--card-bg); border-radius: 8px; padding: 8px 16px;
+    font-size: 1.1rem; font-weight: 700; color: var(--link);
+}
+.page-info { font-size: .9rem; color: var(--hint); }
+
 /* ===== Category chips ===== */
 .category-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 4px; }
 .category-chips::-webkit-scrollbar { display: none; }
@@ -125,6 +148,9 @@ a { color: inherit; text-decoration: none; }
 .cart-item__right { text-align: right; }
 .cart-item__subtotal { font-weight: 700; }
 .cart-item__remove { border: none; background: transparent; color: #ff3b30; font-size: .78rem; cursor: pointer; padding: 4px 0 0; }
+.cart-qty { display: inline-flex; align-items: center; gap: 12px; margin-top: 6px; background: rgba(128,128,128,.12); border-radius: 999px; padding: 2px 10px; }
+.cart-qty__btn { border: none; background: transparent; color: var(--text); font-size: 1.1rem; width: 22px; height: 22px; line-height: 1; cursor: pointer; }
+.cart-qty__value { min-width: 20px; text-align: center; font-weight: 600; font-size: .9rem; }
 .cart-summary { background: var(--card-bg); border-radius: var(--radius); padding: 16px; }
 .cart-summary__row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 1.05rem; }
 .cart-summary__total { font-weight: 800; }

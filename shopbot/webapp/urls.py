@@ -6,6 +6,7 @@ from .api import (
     CartAddView,
     CartClearView,
     CartRemoveView,
+    CartSetView,
     CreateInvoiceView,
     TelegramAuthView,
 )
@@ -25,6 +26,7 @@ urlpatterns = [
     path('api/auth/telegram/', TelegramAuthView.as_view(), name='telegram_auth'),
     path('api/cart/add/', CartAddView.as_view(), name='cart_add'),
     path('api/cart/remove/', CartRemoveView.as_view(), name='cart_remove'),
+    path('api/cart/set/', CartSetView.as_view(), name='cart_set'),
     path('api/cart/clear/', CartClearView.as_view(), name='cart_clear'),
     path('api/create-invoice/', CreateInvoiceView.as_view(), name='create_invoice'),
 ]

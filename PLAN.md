@@ -629,8 +629,9 @@ command: >
 
 ## Post-MVP (Фаза 6+)
 
-- [ ] Поиск — PostgreSQL full-text (SearchVector/SearchRank)
-- [ ] Пагинация — Django Paginator на каталоге
+- [x] Поиск — по name/short/description (icontains); full-text (SearchVector) — позже
+- [x] Пагинация — Django Paginator на каталоге (+ сортировка по цене/дате)
+- [x] Навигация — Telegram BackButton/MainButton, haptics, qty +/- в корзине, тест-режим (TELEGRAM_TEST)
 - [ ] Wishlist — модель Wishlist(user, product)
 - [ ] Отзывы — Review(buyer, product, rating, text)
 - [ ] Уведомления бота — покупателю при покупке, владельцу при продаже

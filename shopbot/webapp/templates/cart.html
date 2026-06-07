@@ -18,7 +18,12 @@
         </div>
         <div class="cart-item__body">
             <div class="cart-item__title">{{ entry.product.name }}</div>
-            <div class="cart-item__meta">{{ entry.quantity }} × {{ entry.product.price_stars }} ⭐</div>
+            <div class="cart-item__meta">{{ entry.product.price_stars }} ⭐ / шт.</div>
+            <div class="cart-qty" data-product-id="{{ entry.product.id }}" data-max="{{ entry.product.stock }}">
+                <button type="button" class="cart-qty__btn" data-action="dec">−</button>
+                <span class="cart-qty__value">{{ entry.quantity }}</span>
+                <button type="button" class="cart-qty__btn" data-action="inc">+</button>
+            </div>
         </div>
         <div class="cart-item__right">
             <div class="cart-item__subtotal">{{ entry.subtotal }} ⭐</div>
@@ -31,7 +36,7 @@
 <div class="cart-summary">
     <div class="cart-summary__row">
         <span>Итого</span>
-        <span class="cart-summary__total">{{ total }} ⭐</span>
+        <span class="cart-summary__total" id="cart-total">{{ total }}</span> ⭐
     </div>
     <button type="button" class="btn-buy" id="checkout-btn">Оплатить {{ total }} ⭐</button>
 </div>

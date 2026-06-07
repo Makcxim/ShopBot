@@ -73,6 +73,34 @@ class CartRemoveView(APIView):
         return Response({'cart_count': cart_utils.cart_count(request.session)})
 
 
+class CartSetView(APIView):
+    """POST /api/cart/set/ — задать количество товара (0 — удалить)."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            product_id = int(request.data.get('product_id'))
+            quantity = int(request.data.get('quantity'))
+        except (TypeError, ValueError):
+            return Response({'detail': 'Некорректные данные'}, status=status.HTTP_400_BAD_REQUEST)
+
+        product = Product.objects.filter(id=product_id).first()
+        if product and quantity > product.stock:
+            quantity = product.stock  # не больше, чем в наличии
+
+        cart_utils.set_quantity(request.session, product_id, quantity)
+        _, total = cart_utils.cart_items(request.session)
+        subtotal = (product.price_stars * quantity) if product else 0
+        return Response({
+            'cart_count': cart_utils.cart_count(request.session),
+            'quantity': max(quantity, 0),
+            'subtotal': subtotal,
+            'total': total,
+        })
+
+
 class CartClearView(APIView):
     """POST /api/cart/clear/ — очистить корзину (после успешной оплаты)."""
 
@@ -110,7 +138,9 @@ class CreateInvoiceView(APIView):
 
         base_api_url = config('TELEGRAM_API_URL', default='https://api.telegram.org/bot')
         telegram_token = config('TELEGRAM_BOT_TOKEN', default='123')
-        api_url = f'{base_api_url}{telegram_token}/createInvoiceLink'
+        # Тестовое окружение: метод вызывается через /test (бесплатные Stars)
+        test_segment = '/test' if config('TELEGRAM_TEST', default=False, cast=bool) else ''
+        api_url = f'{base_api_url}{telegram_token}{test_segment}/createInvoiceLink'
 
         response = requests.post(
             api_url,
