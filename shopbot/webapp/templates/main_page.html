@@ -29,29 +29,36 @@
     </section>
 
     <section class="cafe-page shop_items" id="shop_items_page">
-        {% for item in products %}
-            <div class="cafe-item js-item" data-item-id="{{ item.id }}" data-item-price="{{ item.price }}">
-                <div class="cafe-item-counter js-item-counter">1</div>
-                <div class="cafe-item-photo">
-                    <img src="{{ item.image_original.url }}" alt="{{ item.name }}" class="shop_item_image">
+        {% if products %}
+            {% for item in products %}
+                <div class="cafe-item js-item" data-item-id="{{ item.id }}" data-item-price="{{ item.price }}">
+                    <div class="cafe-item-counter js-item-counter">1</div>
+                    <div class="cafe-item-photo">
+                        <img src="{{ item.image_original.url }}" alt="{{ item.name }}" class="shop_item_image">
+                    </div>
+                    <div class="cafe-item-label">
+                        <span class="cafe-item-title">{{ item.name }}</span><br/>
+                        <span class="cafe-item-price">{{ item.price }}RUB</span>
+                    </div>
+                    <div class="cafe-item-buttons">
+                        <button class="cafe-item-decr-button js-item-decr-btn button-item">
+                        </button>
+                        <button class="cafe-item-incr-button js-item-incr-btn button-item">
+                            <span class="button-item-label">ADD</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="cafe-item-label">
-                    <span class="cafe-item-title">{{ item.name }}</span><br/>
-                    <span class="cafe-item-price">{{ item.price }}RUB</span>
-                </div>
-                <div class="cafe-item-buttons">
-                    <button class="cafe-item-decr-button js-item-decr-btn button-item">
-                    </button>
-                    <button class="cafe-item-incr-button js-item-incr-btn button-item">
-                        <span class="button-item-label">ADD</span>
-                    </button>
-                </div>
+            {% endfor %}
+            <div class="cafe-item-shadow"></div>
+            <div class="cafe-item-shadow"></div>
+            <div class="cafe-item-shadow"></div>
+            <div class="cafe-item-shadow"></div>
+        {% else %}
+            <div class="empty-catalog">
+                <h2>Товары закончились</h2>
+                <p>Заходите позже, скоро появятся новые!</p>
             </div>
-        {% endfor %}
-        <div class="cafe-item-shadow"></div>
-        <div class="cafe-item-shadow"></div>
-        <div class="cafe-item-shadow"></div>
-        <div class="cafe-item-shadow"></div>
+        {% endif %}
     </section>  
 
     <section id="shop_about_us_page">

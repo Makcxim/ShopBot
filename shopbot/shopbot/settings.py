@@ -27,6 +27,7 @@ SECRET_KEY = config('DJANGO_SECRET_KEY', default='mega_secret_key')
 
 DEBUG = config('DEBUG', default=True)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv(), default=[])
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv(), default='')
 
 
 # Application definition
@@ -135,3 +136,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 import os
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')

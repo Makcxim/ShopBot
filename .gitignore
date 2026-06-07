@@ -7,3 +7,6 @@ products/
 
 .venv/
 .idea/
+
+shopbot/static/
+.claude

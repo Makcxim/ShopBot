@@ -15,46 +15,78 @@ Webapp - он же mini apps - они же приложения в Telegram
 
 
 ## Запуск
-1) Получить https сертификат на ваш сервер Ex: [certbot](https://certbot.eff.org)
-2) Создать файл .env и заполнить его по образцу .env.example
-    - необязательно указывать DEBUG, MAIN_PAGE_URL. TELEGRAM_API_URL, DJANGO_SECRET_KEY
-3) Поднять nginx. Мой конфиг, заменить {SERVER_NAME} на свои данные:
+
+Общее для обоих вариантов:
+- Создать файл `.env` в папке `shopbot/` и заполнить по образцу `.env.example`
+    - необязательно указывать `DEBUG`, `MAIN_PAGE_URL`, `TELEGRAM_API_URL`, `DJANGO_SECRET_KEY`
+    - `DB_HOST` должен быть `db` (имя сервиса в docker-compose)
+
+Сервисы docker-compose:
+- `db` — PostgreSQL
+- `web` — Django, слушает `127.0.0.1:9000` на хосте
+- `bot` — Telegram-бот (polling)
+
+
+### Локальное тестирование
+
+Telegram WebApp требует HTTPS, поэтому локально поднимаем стек в Docker, а HTTPS
+получаем через SSH-туннель до VPS (там nginx + сертификат уже настроены).
+
+1) Запустить:
+```bash
+docker compose up -d --build
 ```
+2) Применить миграции и создать суперпользователя:
+```bash
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser
+```
+3) Прокинуть локальный `web` на VPS через обратный SSH-туннель:
+```bash
+ssh -R 9000:127.0.0.1:9000 user@your_domain
+```
+4) Открыть бота — WebApp будет ходить на домен VPS, а запросы попадут в локальный контейнер
+
+
+### Продакшн
+
+1) Получить HTTPS-сертификат на сервер: [certbot](https://certbot.eff.org)
+2) Запустить:
+```bash
+docker compose up -d --build
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser
+```
+3) Настроить хостовой nginx — проксирует на `web` (`127.0.0.1:9000`), заменить `YOUR_DOMAIN`:
+```nginx
 server {
-        server_name {SERVER_NAME} www.{SERVER_NAME};
-        location / {
-                proxy_pass http://localhost:8000;
-                proxy_set_header Host $http_host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-                # proxy_set_header X-Forwarded-Host $server_name;
-                proxy_set_header X-Forwarded-Host $host;
-                proxy_set_header X-Forwarded-Server $host;
-        }
-    listen [::]:443 ssl ipv6only=on; # managed by Certbot
-    listen 443 ssl; # managed by Certbot
-    ssl_certificate /etc/letsencrypt/live/{SERVER_NAME}/fullchain.pem; # managed by Certbot
-    ssl_certificate_key /etc/letsencrypt/live/{SERVER_NAME}/privkey.pem; # managed by Certbot
-    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name YOUR_DOMAIN www.YOUR_DOMAIN;
+
+    ssl_certificate     /etc/letsencrypt/live/YOUR_DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/YOUR_DOMAIN/privkey.pem;
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        proxy_pass         http://127.0.0.1:9000;
+        proxy_set_header   Host              $http_host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_set_header   X-Forwarded-Host  $host;
+        proxy_set_header   X-Forwarded-Server $host;
+    }
 }
+
 server {
-    if ($host = www.{SERVER_NAME}) {
-        return 301 https://$host$request_uri;
-    } # managed by Certbot
-    if ($host = {SERVER_NAME}) {
-        return 301 https://$host$request_uri;
-    } # managed by Certbot
-        listen 80;
-        listen [::]:80;
-        server_name {SERVER_NAME} www.{SERVER_NAME};
-    return 404; # managed by Certbot
+    listen 80;
+    listen [::]:80;
+    server_name YOUR_DOMAIN www.YOUR_DOMAIN;
+    return 301 https://$host$request_uri;
 }
 ```
-4) Запустить тг бота и django сервер командой
- `./start.sh`
-5) должен заработать тг бот 
 
 
 ## Структура
@@ -89,6 +121,9 @@ server {
 для этого нужно зайти по ссылке `https://{your_website}/admin`  
 перейти в модель ShopProduct и добавить полей с играми
 
+команда `python manage.py seed_test_data`   
+создаст тестовые данные
+
 команда `python manage.py generate_product_keys`   
 добавит к каждой игре по 10 ключей для тестов
 
@@ -97,11 +132,7 @@ server {
 автоматически обновит поля оставшихся ключей в модели игр
 
 команда `python manage.py start_telegram_bot`   
-запустит телеграм бота
-
-команда запуска `./start.sh` может некорректно отработать при  
-завершении работы, поэтому возможно придется вручную килять   
-процессы для повторного запуска
+запустит телеграм бота (в Docker это делает сервис `bot` автоматически)
 
 
 ## Интересное
@@ -130,10 +161,9 @@ server {
 
 ## TODO
 
-- [ ] docker
+- [x] docker
 - [ ] optimize js code
-- [ ] improve layout 
-- [ ] normal start script
+- [ ] improve layout
 
 ## THX
 
