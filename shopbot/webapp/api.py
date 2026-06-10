@@ -5,9 +5,22 @@ from decouple import config
 from django.contrib.auth import login
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    """Сессионная аутентификация без CSRF — для WebApp-эндпоинтов.
+
+    Telegram WebApp кэширует HTML, из-за чего csrf-токен в странице расходится
+    с cookie. Запросы идут с того же домена, пользователь действует над своими
+    же данными, поэтому CSRF-проверку отключаем (как и у эндпоинтов корзины).
+    """
+
+    def enforce_csrf(self, request):
+        return
 
 from . import cart as cart_utils
 from .models import Order, Product, ProductKey, TelegramUser
@@ -172,6 +185,7 @@ class RefundOrderView(APIView):
     заказ помечается как возвращённый.
     """
 
+    authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
