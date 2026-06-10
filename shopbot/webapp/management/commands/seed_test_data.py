@@ -85,6 +85,55 @@ SHOPS = [
              'short': 'Кооп-хоррор', 'desc': 'Охота на призраков с друзьями.'},
         ],
     },
+    {
+        'shop': {'name': 'AAA Keys', 'slug': 'aaa-keys', 'is_verified': True,
+                 'description': 'Только крупные релизы. Официальные ключи Steam.'},
+        'owner': {'telegram_id': 100000005, 'username': 'aaa_owner'},
+        'products': [
+            {'name': 'Grand Theft Auto V', 'appid': 271590, 'price': 1, 'cat': 'open-world',
+             'short': 'Открытый мир от Rockstar', 'desc': 'Лос-Сантос, три героя и бесконечный онлайн.'},
+            {'name': 'God of War', 'appid': 1593500, 'price': 1, 'cat': 'action',
+             'short': 'Кратос и Атрей', 'desc': 'Скандинавская сага о боге войны и его сыне.'},
+            {'name': 'Horizon Zero Dawn', 'appid': 1151640, 'price': 1, 'cat': 'open-world',
+             'short': 'Постапокалипсис с роботами', 'desc': 'Элой против машин в дивном новом мире.'},
+            {'name': 'Hogwarts Legacy', 'appid': 990080, 'price': 1, 'cat': 'rpg',
+             'short': 'RPG в мире Гарри Поттера', 'desc': 'Стань учеником Хогвартса XIX века.'},
+            {'name': 'Sekiro: Shadows Die Twice', 'appid': 814380, 'price': 1, 'cat': 'action',
+             'short': 'Хардкор от FromSoftware', 'desc': 'Шиноби, катана и смерть на каждом шагу.'},
+        ],
+    },
+    {
+        'shop': {'name': 'IndieHub', 'slug': 'indiehub', 'is_verified': True,
+                 'description': 'Лучшие инди-игры с душой.'},
+        'owner': {'telegram_id': 100000006, 'username': 'indie_owner'},
+        'products': [
+            {'name': 'Terraria', 'appid': 105600, 'price': 1, 'cat': 'action',
+             'short': 'Песочница-приключение', 'desc': 'Копай, строй, сражайся в 2D-мире.'},
+            {'name': 'Dead Cells', 'appid': 588650, 'price': 1, 'cat': 'action',
+             'short': 'Роглайт-метроидвания', 'desc': 'Умри и начни заново — снова и снова.'},
+            {'name': 'Disco Elysium', 'appid': 632470, 'price': 1, 'cat': 'rpg',
+             'short': 'Детективная RPG', 'desc': 'Расследование, диалоги и внутренние демоны.'},
+            {'name': 'Subnautica', 'appid': 264710, 'price': 1, 'cat': 'action',
+             'short': 'Выживание под водой', 'desc': 'Исследуй океан чужой планеты.'},
+            {'name': 'Factorio', 'appid': 427520, 'price': 1, 'cat': 'strategy',
+             'short': 'Симулятор фабрики', 'desc': 'Автоматизируй всё. Фабрика должна расти.'},
+        ],
+    },
+    {
+        'shop': {'name': 'CoopZone', 'slug': 'coopzone', 'is_verified': False,
+                 'description': 'Игры, чтобы рубиться с друзьями.'},
+        'owner': {'telegram_id': 100000007, 'username': 'coop_owner'},
+        'products': [
+            {'name': 'It Takes Two', 'appid': 1426210, 'price': 1, 'cat': 'action',
+             'short': 'Кооп-приключение', 'desc': 'Только вдвоём — лучшая кооперативная игра.'},
+            {'name': 'Palworld', 'appid': 1623730, 'price': 1, 'cat': 'open-world',
+             'short': 'Покемоны с пушками', 'desc': 'Лови палов, строй базу, выживай.'},
+            {'name': 'Portal 2', 'appid': 620, 'price': 1, 'cat': 'action',
+             'short': 'Головоломки с порталами', 'desc': 'Гениальная пазл-игра от Valve.'},
+            {'name': 'Rust', 'appid': 252490, 'price': 1, 'cat': 'action',
+             'short': 'Хардкорное выживание', 'desc': 'Голый старт, рейды и борьба за ресурсы.'},
+        ],
+    },
 ]
 
 
@@ -123,7 +172,7 @@ class Command(BaseCommand):
                     slug=slugify(data['name']),
                     short_description=data['short'],
                     description=data['desc'],
-                    price_stars=data['price'],
+                    price_stars=1,  # все игры по 1 ⭐ (для тестовой оплаты)
                 )
                 self._attach_image(product, data.get('appid'), options['no_images'])
                 product.save()

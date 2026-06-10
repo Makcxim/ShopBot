@@ -27,14 +27,14 @@
                 <i class="bi bi-people"></i> Пользователи</a>
             {% endif %}
         </nav>
-        <div class="panel-sidebar__footer">
-            <a href="/" class="text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> На витрину</a>
-        </div>
     </aside>
 
     <div class="panel-main">
         <header class="panel-header">
-            <h1 class="panel-header__title">{% block heading %}{% endblock %}</h1>
+            <div class="panel-header__left">
+                <a href="/" class="panel-back" title="На витрину"><i class="bi bi-arrow-left"></i></a>
+                <h1 class="panel-header__title">{% block heading %}{% endblock %}</h1>
+            </div>
             <div class="panel-header__user">
                 <i class="bi bi-person-circle"></i>
                 {{ request.user.username }}

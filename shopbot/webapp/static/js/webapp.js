@@ -204,6 +204,50 @@
         });
     }
 
+    // ===== Бесконечная подгрузка каталога =====
+    function initInfiniteScroll() {
+        const grid = document.getElementById('product-grid');
+        const sentinel = document.getElementById('infinite-sentinel');
+        const loader = document.getElementById('catalog-loader');
+        if (!grid || !sentinel) return;
+
+        let nextPage = parseInt(sentinel.dataset.nextPage || '0', 10);
+        let hasNext = sentinel.dataset.hasNext === '1';
+        const params = sentinel.dataset.params || '';
+        let loading = false;
+
+        function loadMore() {
+            if (loading || !hasNext) return;
+            loading = true;
+            if (loader) loader.classList.remove('d-none');
+            const qs = (params ? params + '&' : '') + 'partial=1&page=' + nextPage;
+            fetch(location.pathname + '?' + qs)
+                .then(function (r) { return r.text(); })
+                .then(function (html) {
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = html;
+                    tmp.querySelectorAll('.product-card').forEach(function (card) {
+                        grid.appendChild(card);
+                    });
+                    const meta = tmp.querySelector('#page-meta');
+                    hasNext = meta && meta.dataset.hasNext === '1';
+                    nextPage = meta && meta.dataset.nextPage ? parseInt(meta.dataset.nextPage, 10) : nextPage;
+                    loading = false;
+                    if (loader) loader.classList.add('d-none');
+                    if (!hasNext) { observer.disconnect(); sentinel.remove(); }
+                })
+                .catch(function () {
+                    loading = false;
+                    if (loader) loader.classList.add('d-none');
+                });
+        }
+
+        const observer = new IntersectionObserver(function (entries) {
+            if (entries[0].isIntersecting) loadMore();
+        }, { rootMargin: '300px' });
+        observer.observe(sentinel);
+    }
+
     // ===== Возврат звёзд по заказу =====
     function initRefund() {
         document.querySelectorAll('.order-refund-btn').forEach(function (btn) {
@@ -290,6 +334,7 @@
         initCartRemove();
         initCartQty();
         initRefund();
+        initInfiniteScroll();
         initCheckout();
     });
 })();

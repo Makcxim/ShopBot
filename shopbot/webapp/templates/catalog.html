@@ -27,23 +27,19 @@
 {% endif %}
 
 {% if products %}
-<div class="product-grid">
+<div class="product-grid" id="product-grid">
     {% for item in products %}
         {% include 'includes/product_card.html' %}
     {% endfor %}
 </div>
 
-{% if page_obj.has_other_pages %}
-<nav class="pagination-bar">
-    {% if page_obj.has_previous %}
-        <a class="page-btn" href="?{% if extra_params %}{{ extra_params }}&{% endif %}page={{ page_obj.previous_page_number }}">‹</a>
-    {% endif %}
-    <span class="page-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}
-        <a class="page-btn" href="?{% if extra_params %}{{ extra_params }}&{% endif %}page={{ page_obj.next_page_number }}">›</a>
-    {% endif %}
-</nav>
+{% if page_obj.has_next %}
+<div id="infinite-sentinel"
+     data-next-page="{{ page_obj.next_page_number }}"
+     data-has-next="1"
+     data-params="{{ extra_params }}"></div>
 {% endif %}
+<div id="catalog-loader" class="catalog-loader d-none"><div class="catalog-spinner"></div></div>
 
 {% else %}
     {% if query %}

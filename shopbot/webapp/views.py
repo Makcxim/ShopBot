@@ -47,9 +47,10 @@ def catalog_view(request, category_slug=None):
     paginator = Paginator(products, PAGE_SIZE)
     page = paginator.get_page(request.GET.get('page'))
 
-    # Параметры запроса для сохранения в ссылках пагинации/сортировки
+    # Параметры запроса (q/sort/...) для подгрузки следующих страниц, без page
     extra_params = request.GET.copy()
     extra_params.pop('page', None)
+    extra_params.pop('partial', None)
 
     context = _base_context(request)
     context.update({
@@ -61,6 +62,10 @@ def catalog_view(request, category_slug=None):
         'sort': sort,
         'extra_params': extra_params.urlencode(),
     })
+
+    # AJAX-подгрузка следующей страницы: отдаём только карточки + мета
+    if request.GET.get('partial'):
+        return render(request, 'includes/_catalog_page.html', context)
     return render(request, 'catalog.html', context)
 
 

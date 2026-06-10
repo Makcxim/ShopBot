@@ -24,8 +24,6 @@ body { margin: 0; background: var(--content-bg); font-family: -apple-system, Bli
 }
 .panel-nav a:hover { background: rgba(255,255,255,.06); color: #fff; }
 .panel-nav a.active { background: var(--sidebar-active); color: #fff; }
-.panel-sidebar__footer { padding: 16px 22px; border-top: 1px solid rgba(255,255,255,.08); }
-.panel-sidebar__footer a { color: var(--sidebar-fg); font-size: .85rem; }
 
 /* Main */
 .panel-main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -33,6 +31,14 @@ body { margin: 0; background: var(--content-bg); font-family: -apple-system, Bli
     background: #fff; border-bottom: 1px solid #e6e8f0;
     padding: 16px 28px; display: flex; justify-content: space-between; align-items: center;
 }
+.panel-header__left { display: flex; align-items: center; gap: 12px; }
+.panel-back {
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--content-bg); color: #333; font-size: 1.1rem;
+    text-decoration: none; transition: background .15s;
+}
+.panel-back:hover { background: #e6e8f0; color: #000; }
 .panel-header__title { font-size: 1.3rem; font-weight: 700; margin: 0; }
 .panel-header__user { font-size: .9rem; color: #555; display: flex; align-items: center; gap: 8px; }
 .panel-content { padding: 28px; }
@@ -57,5 +63,4 @@ body { margin: 0; background: var(--content-bg); font-family: -apple-system, Bli
     .panel-nav a span, .panel-nav a { font-size: 0; justify-content: center; }
     .panel-nav a i { font-size: 1.1rem; }
     .panel-main { margin-left: 64px; }
-    .panel-sidebar__footer { font-size: 0; text-align: center; }
 }
