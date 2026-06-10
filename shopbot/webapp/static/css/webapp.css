@@ -23,7 +23,12 @@ body {
 
 a { color: inherit; text-decoration: none; }
 
-.app-content { padding-bottom: calc(var(--nav-h) + 40px + env(safe-area-inset-bottom)); max-width: 720px; min-height: 100vh; }
+.app-content {
+    padding-top: 14px;
+    padding-bottom: calc(var(--nav-h) + 48px + env(safe-area-inset-bottom));
+    max-width: 720px;
+    min-height: 100vh;
+}
 
 .page-title { font-size: 1.5rem; font-weight: 700; margin: 4px 0 16px; }
 .section-title { font-size: 1.1rem; font-weight: 600; margin: 24px 0 12px; }
