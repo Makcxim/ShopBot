@@ -32,20 +32,22 @@ def dashboard_view(request):
     shops = shops_for(user)
     paid_items = OrderItem.objects.filter(shop__in=shops, order__status__in=PAID)
 
-    # График выручки за последние 14 дней
+    # Выручка и число заказов за последние 14 дней
     start = timezone.now().date() - timedelta(days=13)
     daily = (
         paid_items.filter(order__created_at__date__gte=start)
         .annotate(day=TruncDate('order__created_at'))
         .values('day')
-        .annotate(rev=Sum(REVENUE_EXPR))
+        .annotate(rev=Sum(REVENUE_EXPR), orders=Count('order', distinct=True))
     )
-    by_day = {row['day']: row['rev'] for row in daily}
-    labels, data = [], []
+    rev_by_day = {row['day']: row['rev'] for row in daily}
+    ord_by_day = {row['day']: row['orders'] for row in daily}
+    labels, data, orders_data = [], [], []
     for i in range(14):
         d = start + timedelta(days=i)
         labels.append(d.strftime('%d.%m'))
-        data.append(by_day.get(d, 0))
+        data.append(rev_by_day.get(d, 0))
+        orders_data.append(ord_by_day.get(d, 0))
 
     top_products = (
         paid_items.values('product__name')
@@ -58,6 +60,36 @@ def dashboard_view(request):
         .order_by('-created_at')[:10]
     )
 
+    # Выручка по категориям (doughnut)
+    by_category = (
+        paid_items.values('product__category__name')
+        .annotate(rev=Sum(REVENUE_EXPR))
+        .order_by('-rev')[:8]
+    )
+    cat_labels = [r['product__category__name'] or 'Без категории' for r in by_category]
+    cat_data = [r['rev'] for r in by_category]
+
+    # Статусы заказов (doughnut)
+    status_rows = (
+        Order.objects.filter(items__shop__in=shops)
+        .values('status')
+        .annotate(c=Count('id', distinct=True))
+    )
+    status_map = dict(Order.Status.choices)
+    status_labels = [status_map.get(r['status'], r['status']) for r in status_rows]
+    status_data = [r['c'] for r in status_rows]
+
+    # Выручка по магазинам (для супер-админа — распределение по всем магазинам)
+    shop_labels, shop_data = [], []
+    if user.is_superuser:
+        by_shop = (
+            paid_items.values('shop__name')
+            .annotate(rev=Sum(REVENUE_EXPR))
+            .order_by('-rev')[:8]
+        )
+        shop_labels = [r['shop__name'] for r in by_shop]
+        shop_data = [r['rev'] for r in by_shop]
+
     context = {
         'active': 'dashboard',
         'revenue': _revenue(paid_items),
@@ -65,11 +97,20 @@ def dashboard_view(request):
         'products_count': Product.objects.filter(shop__in=shops).count(),
         'shops_count': shops.count(),
         'keys_available': ProductKey.objects.filter(product__shop__in=shops, is_sold=False).count(),
+        'keys_sold': ProductKey.objects.filter(product__shop__in=shops, is_sold=True).count(),
         'users_count': TelegramUser.objects.count() if user.is_superuser else None,
         'top_products': top_products,
         'recent_orders': recent_orders,
         'chart_labels': json.dumps(labels),
         'chart_data': json.dumps(data),
+        'orders_chart_data': json.dumps(orders_data),
+        'cat_labels': json.dumps(cat_labels),
+        'cat_data': json.dumps(cat_data),
+        'status_labels': json.dumps(status_labels),
+        'status_data': json.dumps(status_data),
+        'shop_labels': json.dumps(shop_labels),
+        'shop_data': json.dumps(shop_data),
+        'is_super': user.is_superuser,
     }
     return render(request, 'panel/dashboard.html', context)
 
