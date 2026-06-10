@@ -104,6 +104,19 @@ def orders_view(request):
 
 
 @ensure_csrf_cookie
+def profile_view(request):
+    """Профиль пользователя: вход в панель продавца или регистрация магазина."""
+    context = _base_context(request)
+    if request.user.is_authenticated:
+        shops = request.user.shops.all()
+        context.update({
+            'shops': shops,
+            'has_panel_access': request.user.is_superuser or shops.exists(),
+        })
+    return render(request, 'profile.html', context)
+
+
+@ensure_csrf_cookie
 def shop_profile_view(request, shop_slug):
     """Страница магазина: описание + его товары."""
     shop = get_object_or_404(Shop, slug=shop_slug, is_active=True)

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Профиль — Маркетплейс ключей{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Профиль</h1>
+
+{% if request.user.is_authenticated %}
+<div class="profile-card">
+    <div class="profile-card__avatar">
+        {% if request.user.avatar_url %}<img src="{{ request.user.avatar_url }}" alt="">{% else %}👤{% endif %}
+    </div>
+    <div class="profile-card__name">
+        {{ request.user.telegram_username|default:request.user.username }}
+    </div>
+    {% if request.user.telegram_id %}
+        <div class="profile-card__id">ID: {{ request.user.telegram_id }}</div>
+    {% endif %}
+</div>
+
+<div class="profile-actions">
+    <a href="/orders/" class="profile-action">📦 Мои заказы</a>
+    {% if has_panel_access %}
+        <a href="/panel/" class="profile-action profile-action--accent">📊 Панель управления</a>
+        {% for shop in shops %}
+            <a href="/panel/shops/{{ shop.id }}/" class="profile-action">🏪 {{ shop.name }}</a>
+        {% endfor %}
+    {% else %}
+        <a href="/panel/shops/create/" class="profile-action profile-action--accent">🏪 Стать продавцом</a>
+    {% endif %}
+</div>
+{% else %}
+    {% include 'includes/empty_state.html' with icon="🔐" title="Войдите через Telegram" subtitle="Профиль доступен в приложении Telegram" %}
+{% endif %}
+{% endblock %}

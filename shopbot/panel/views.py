@@ -2,7 +2,6 @@ import json
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.db.models import Count, ExpressionWrapper, F, IntegerField, Sum
 from django.db.models.functions import TruncDate
 from django.shortcuts import get_object_or_404, redirect, render
@@ -12,7 +11,7 @@ from webapp.models import (
     Order, OrderItem, Product, ProductKey, Shop, ShopMembership, TelegramUser,
 )
 
-from .access import can_manage, is_owner, panel_required, shops_for
+from .access import can_manage, is_owner, panel_required, render_forbidden, shops_for
 from .forms import (
     KeysUploadForm, MemberAddForm, ProductForm, ShopForm, unique_shop_slug,
 )
@@ -201,7 +200,7 @@ def shop_detail_view(request, pk):
 @panel_required
 def user_list_view(request):
     if not request.user.is_superuser:
-        raise PermissionDenied('Только для супер-админа')
+        return render_forbidden(request, 'Доступно только супер-админу')
     users = TelegramUser.objects.order_by('-date_joined')
     return render(request, 'panel/users/list.html', {'active': 'users', 'users': users})
 
@@ -226,7 +225,7 @@ def shop_create_view(request):
 def shop_verify_view(request, pk):
     """Верификация магазина — только супер-админ."""
     if not request.user.is_superuser:
-        raise PermissionDenied('Только для супер-админа')
+        return render_forbidden(request, 'Доступно только супер-админу')
     shop = get_object_or_404(Shop, pk=pk)
     if request.method == 'POST':
         shop.is_verified = not shop.is_verified
@@ -239,7 +238,7 @@ def shop_members_view(request, pk):
     """Управление сотрудниками — владелец или супер-админ."""
     shop = get_object_or_404(shops_for(request.user), pk=pk)
     if not can_manage(request.user, shop):
-        raise PermissionDenied('Только владелец магазина')
+        return render_forbidden(request, 'Только владелец магазина может управлять сотрудниками')
 
     form = MemberAddForm(request.POST or None)
     error = None
@@ -269,7 +268,7 @@ def member_remove_view(request, pk, membership_id):
     """Удаление сотрудника из магазина."""
     shop = get_object_or_404(shops_for(request.user), pk=pk)
     if not can_manage(request.user, shop):
-        raise PermissionDenied('Только владелец магазина')
+        return render_forbidden(request, 'Только владелец магазина может управлять сотрудниками')
     if request.method == 'POST':
         ShopMembership.objects.filter(
             id=membership_id, shop=shop, role=ShopMembership.Role.STAFF

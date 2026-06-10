@@ -6,9 +6,18 @@
 from functools import wraps
 
 from django.contrib.auth.views import redirect_to_login
-from django.core.exceptions import PermissionDenied
+from django.shortcuts import render
 
 from webapp.models import Shop
+
+
+def render_forbidden(request, message='Недостаточно прав для этого действия'):
+    """Дружелюбная страница 403 с навигацией (вместо голого Forbidden)."""
+    has_access = request.user.is_authenticated and (
+        request.user.is_superuser or request.user.shop_memberships.exists()
+    )
+    return render(request, 'panel/forbidden.html',
+                  {'message': message, 'has_access': has_access}, status=403)
 
 
 def shops_for(user):
@@ -46,7 +55,10 @@ def panel_required(view_func):
         if not request.user.is_authenticated:
             return redirect_to_login(request.get_full_path())
         if not has_panel_access(request.user):
-            raise PermissionDenied('Нет доступа к панели')
+            return render_forbidden(
+                request,
+                'У вас пока нет магазина. Создайте его, чтобы пользоваться панелью.',
+            )
         return view_func(request, *args, **kwargs)
 
     return wrapper

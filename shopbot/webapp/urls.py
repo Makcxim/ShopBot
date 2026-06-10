@@ -20,6 +20,7 @@ urlpatterns = [
     path('category/<slug:category_slug>/', views.catalog_view, name='catalog_by_category'),
     path('cart/', views.cart_view, name='cart'),
     path('orders/', views.orders_view, name='orders'),
+    path('profile/', views.profile_view, name='profile'),
     path('shop/<slug:shop_slug>/', views.shop_profile_view, name='shop_profile'),
     path('shop/<slug:shop_slug>/<slug:product_slug>/', views.product_detail_view, name='product_detail'),
     # API (DRF)

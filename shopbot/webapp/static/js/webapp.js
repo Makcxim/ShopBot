@@ -127,6 +127,8 @@
     function initAddToCart() {
         const btn = document.getElementById('add-to-cart-btn');
         if (!btn) return;
+        const original = btn.textContent;
+        let resetTimer = null;
         btn.addEventListener('click', function () {
             const productId = parseInt(btn.dataset.productId, 10);
             const valueEl = document.getElementById('qty-value');
@@ -135,7 +137,14 @@
                 .then(function (data) {
                     updateCartBadge(data.cart_count);
                     haptic('medium');
-                    toast('Добавлено в корзину');
+                    // Ненавязчивый отклик прямо на кнопке вместо попапа
+                    btn.textContent = '✓ В корзине';
+                    btn.classList.add('btn-buy--ok');
+                    clearTimeout(resetTimer);
+                    resetTimer = setTimeout(function () {
+                        btn.textContent = original;
+                        btn.classList.remove('btn-buy--ok');
+                    }, 1400);
                 })
                 .catch(function () { toast('Не удалось добавить'); });
         });

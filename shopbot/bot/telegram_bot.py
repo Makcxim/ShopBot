@@ -10,7 +10,7 @@ from decouple import config
 from django.db import transaction
 from django.utils import timezone
 
-from webapp.models import Order, OrderItem, Product, ProductKey, TelegramUser
+from webapp.models import Order, OrderItem, Product, ProductKey, ShopMembership, TelegramUser
 
 router = Router(name=__name__)
 
@@ -49,11 +49,11 @@ async def pre_checkout_query(pre_checkout_query: PreCheckoutQuery, bot: Bot):
 
 @router.message(F.content_type == ContentType.SUCCESSFUL_PAYMENT)
 async def successful_payment(message: Message):
-    """Создаёт заказ, выдаёт ключи и отправляет их покупателю."""
+    """Создаёт заказ, выдаёт ключи покупателю и уведомляет владельцев магазинов."""
     sp = message.successful_payment
     payload = json.loads(sp.invoice_payload)
 
-    thx_msg, keys_msg = await sync_to_async(_process_payment)(
+    thx_msg, keys_msg, seller_notifications = await sync_to_async(_process_payment)(
         telegram_id=message.from_user.id,
         telegram_username=message.from_user.username or '',
         full_name=message.from_user.full_name,
@@ -64,6 +64,13 @@ async def successful_payment(message: Message):
 
     await message.answer(thx_msg)
     await message.answer(keys_msg)
+
+    # Уведомляем владельцев магазинов о продаже (если они запускали бота)
+    for owner_id, text in seller_notifications:
+        try:
+            await message.bot.send_message(owner_id, text)
+        except Exception:
+            pass  # владелец мог не начать диалог с ботом
 
 
 def _has_enough_keys(payload):
@@ -96,6 +103,8 @@ def _process_payment(telegram_id, telegram_username, full_name, payload, total_s
 
     thx_msg = f"Спасибо за покупку на {total_stars} ⭐!\n"
     keys_msg = "Ваши ключи:\n"
+    # Сводка продаж по магазинам для уведомления владельцев: shop_id -> (shop, [строки])
+    shop_sales = {}
 
     for index, item in enumerate(payload, start=1):
         product = Product.objects.get(id=item['product_id'])
@@ -129,7 +138,21 @@ def _process_payment(telegram_id, telegram_username, full_name, payload, total_s
         for n, key in enumerate(key_values, start=1):
             keys_msg += f"Ключ №{n} от {product.name}: {key}\n"
 
+        entry = shop_sales.setdefault(product.shop_id, (product.shop, []))
+        entry[1].append(f"• {product.name} × {quantity} = {product.price_stars * quantity} ⭐")
+
     order.status = Order.Status.DELIVERED
     order.save(update_fields=['status'])
 
-    return thx_msg, keys_msg
+    # Формируем уведомления владельцам (один владелец может иметь несколько магазинов)
+    notifications = []
+    for shop, lines in shop_sales.values():
+        owner_ids = ShopMembership.objects.filter(
+            shop=shop, role=ShopMembership.Role.OWNER
+        ).values_list('user__telegram_id', flat=True)
+        text = f"🛒 Новая продажа в «{shop.name}» (заказ #{order.id}):\n" + "\n".join(lines)
+        for owner_id in owner_ids:
+            if owner_id:
+                notifications.append((owner_id, text))
+
+    return thx_msg, keys_msg, notifications
