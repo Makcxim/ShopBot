@@ -144,15 +144,21 @@ class Command(BaseCommand):
         parser.add_argument('--no-images', action='store_true', help='Не скачивать обложки')
 
     def handle(self, *args, **options):
-        if Shop.objects.exists():
-            self.stdout.write('Данные уже есть. Пропускаю seed.')
-            return
+        # Идемпотентно: категории/магазины/товары досоздаются, существующие не трогаются.
 
         # Категории
-        categories = {c['slug']: Category.objects.create(**c) for c in CATEGORIES}
-        self.stdout.write(f'Создано категорий: {len(categories)}')
+        categories = {}
+        for c in CATEGORIES:
+            cat, _ = Category.objects.get_or_create(slug=c['slug'], defaults=c)
+            categories[c['slug']] = cat
+        self.stdout.write(f'Категорий всего: {len(categories)}')
 
         for entry in SHOPS:
+            shop_data = entry['shop']
+            if Shop.objects.filter(slug=shop_data['slug']).exists():
+                self.stdout.write(f'Магазин «{shop_data["name"]}» уже есть — пропускаю')
+                continue
+
             owner, _ = TelegramUser.objects.get_or_create(
                 telegram_id=entry['owner']['telegram_id'],
                 defaults={
@@ -160,7 +166,7 @@ class Command(BaseCommand):
                     'telegram_username': entry['owner']['username'],
                 },
             )
-            shop = Shop.objects.create(**entry['shop'])
+            shop = Shop.objects.create(**shop_data)
             ShopMembership.objects.create(user=owner, shop=shop, role=ShopMembership.Role.OWNER)
             self.stdout.write(f'Магазин: {shop.name} (владелец {owner})')
 
