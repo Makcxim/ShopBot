@@ -6,6 +6,12 @@ DEBUG = False
 # ALLOWED_HOSTS и CSRF_TRUSTED_ORIGINS должны быть заданы в .env
 # (наследуются из base.py через config()).
 
+# Хешированные имена статики (cache-busting) — Telegram агрессивно кэширует static.
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'},
+}
+
 # За nginx TLS терминируется на проксе — доверяем заголовку.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_COOKIE_SECURE = True
