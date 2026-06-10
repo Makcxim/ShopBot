@@ -8,6 +8,7 @@ from .api import (
     CartRemoveView,
     CartSetView,
     CreateInvoiceView,
+    RefundOrderView,
     TelegramAuthView,
 )
 
@@ -30,4 +31,5 @@ urlpatterns = [
     path('api/cart/set/', CartSetView.as_view(), name='cart_set'),
     path('api/cart/clear/', CartClearView.as_view(), name='cart_clear'),
     path('api/create-invoice/', CreateInvoiceView.as_view(), name='create_invoice'),
+    path('api/orders/<int:pk>/refund/', RefundOrderView.as_view(), name='order_refund'),
 ]

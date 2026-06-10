@@ -30,6 +30,9 @@
             {% endfor %}
         </ul>
         <div class="order-card__total">Итого: {{ order.total_stars }} ⭐</div>
+        {% if order.status == 'paid' or order.status == 'delivered' %}
+        <button type="button" class="order-refund-btn" data-order-id="{{ order.id }}">Вернуть звёзды</button>
+        {% endif %}
     </div>
     {% endfor %}
 </div>

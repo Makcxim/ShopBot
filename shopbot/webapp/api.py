@@ -3,15 +3,24 @@ import json
 import requests
 from decouple import config
 from django.contrib.auth import login
+from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import cart as cart_utils
-from .models import Product, TelegramUser
+from .models import Order, Product, ProductKey, TelegramUser
 from .serializers import CartItemSerializer, TelegramUserSerializer
 from .telegram_auth import validate_init_data
+
+
+def _telegram_api_url(method):
+    """URL метода Bot API с учётом тестового окружения."""
+    base = config('TELEGRAM_API_URL', default='https://api.telegram.org/bot')
+    token = config('TELEGRAM_BOT_TOKEN', default='123')
+    test = '/test' if config('TELEGRAM_TEST', default=False, cast=bool) else ''
+    return f'{base}{token}{test}/{method}'
 
 
 class TelegramAuthView(APIView):
@@ -136,14 +145,8 @@ class CreateInvoiceView(APIView):
             for item in items
         ]
 
-        base_api_url = config('TELEGRAM_API_URL', default='https://api.telegram.org/bot')
-        telegram_token = config('TELEGRAM_BOT_TOKEN', default='123')
-        # Тестовое окружение: метод вызывается через /test (бесплатные Stars)
-        test_segment = '/test' if config('TELEGRAM_TEST', default=False, cast=bool) else ''
-        api_url = f'{base_api_url}{telegram_token}{test_segment}/createInvoiceLink'
-
         response = requests.post(
-            api_url,
+            _telegram_api_url('createInvoiceLink'),
             json={
                 'title': 'Оплата заказа',
                 'description': 'Покупка цифровых ключей',
@@ -160,3 +163,47 @@ class CreateInvoiceView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
         return Response({'invoice_link': result['result']})
+
+
+class RefundOrderView(APIView):
+    """POST /api/orders/<pk>/refund/ — возврат звёзд покупателю (refundStarPayment).
+
+    Покупатель может вернуть свой оплаченный заказ. Ключи возвращаются в наличие,
+    заказ помечается как возвращённый.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk, buyer=request.user)
+
+        if order.status == Order.Status.REFUNDED:
+            return Response({'detail': 'Заказ уже возвращён'}, status=status.HTTP_400_BAD_REQUEST)
+        if order.status not in (Order.Status.PAID, Order.Status.DELIVERED):
+            return Response({'detail': 'Этот заказ нельзя вернуть'}, status=status.HTTP_400_BAD_REQUEST)
+        if not order.telegram_payment_charge_id:
+            return Response({'detail': 'Нет данных платежа для возврата'}, status=status.HTTP_400_BAD_REQUEST)
+
+        response = requests.post(
+            _telegram_api_url('refundStarPayment'),
+            json={
+                'user_id': request.user.telegram_id,
+                'telegram_payment_charge_id': order.telegram_payment_charge_id,
+            },
+        )
+        result = response.json()
+        if not result.get('ok'):
+            return Response(
+                {'detail': 'Telegram отклонил возврат', 'telegram': result},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        # Возвращаем ключи в наличие и помечаем заказ возвращённым
+        for item in order.items.all():
+            ProductKey.objects.filter(order_item=item).update(
+                is_sold=False, sold_at=None, order_item=None
+            )
+        order.status = Order.Status.REFUNDED
+        order.save(update_fields=['status'])
+
+        return Response({'status': 'refunded'})

@@ -204,6 +204,36 @@
         });
     }
 
+    // ===== Возврат звёзд по заказу =====
+    function initRefund() {
+        document.querySelectorAll('.order-refund-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const orderId = parseInt(btn.dataset.orderId, 10);
+                const confirmRefund = function (ok) {
+                    if (!ok) return;
+                    btn.disabled = true;
+                    btn.textContent = 'Возврат…';
+                    post('/api/orders/' + orderId + '/refund/', {})
+                        .then(function () {
+                            haptic('medium');
+                            toast('Звёзды возвращены');
+                            setTimeout(function () { location.reload(); }, 600);
+                        })
+                        .catch(function (err) {
+                            toast((err && err.detail) ? err.detail : 'Не удалось вернуть');
+                            btn.disabled = false;
+                            btn.textContent = 'Вернуть звёзды';
+                        });
+                };
+                if (tg && tg.showConfirm) {
+                    tg.showConfirm('Вернуть звёзды за этот заказ?', confirmRefund);
+                } else {
+                    confirmRefund(confirm('Вернуть звёзды за этот заказ?'));
+                }
+            });
+        });
+    }
+
     // ===== Оплата (Telegram Stars) =====
     function doCheckout(onDone) {
         post('/api/create-invoice/', {})
@@ -259,6 +289,7 @@
         initAddToCart();
         initCartRemove();
         initCartQty();
+        initRefund();
         initCheckout();
     });
 })();

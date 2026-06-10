@@ -10,3 +10,4 @@ products/
 
 shopbot/static/
 .claude
+deploy.sh
