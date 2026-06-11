@@ -40,6 +40,7 @@
 <div class="panel-card">
     <h2 class="panel-card__title">Выручка и заказы за 14 дней</h2>
     <canvas id="revenueChart" height="80"></canvas>
+    <p id="revenueEmpty" class="text-muted text-center mb-0 py-5" style="display:none">Пока нет продаж за этот период</p>
 </div>
 
 <div class="row">
@@ -114,31 +115,39 @@
     const PALETTE = ['#4b6cff', '#34c759', '#ff9500', '#ff3b30', '#af52de', '#5ac8fa', '#ffcc00', '#8e8e93'];
 
     // Выручка (линия) + заказы (столбцы) на двух осях
-    new Chart(document.getElementById('revenueChart'), {
-        data: {
-            labels: {{ chart_labels|safe }},
-            datasets: [
-                {
-                    type: 'line', label: 'Выручка ⭐', yAxisID: 'y',
-                    data: {{ chart_data|safe }},
-                    borderColor: '#4b6cff', backgroundColor: 'rgba(75,108,255,.12)',
-                    fill: true, tension: .3
-                },
-                {
-                    type: 'bar', label: 'Заказы', yAxisID: 'y1',
-                    data: {{ orders_chart_data|safe }},
-                    backgroundColor: 'rgba(52,199,89,.45)', borderRadius: 4
+    const revData = {{ chart_data|safe }};
+    const ordData = {{ orders_chart_data|safe }};
+    const hasRevenue = revData.concat(ordData).some(v => v > 0);
+    if (!hasRevenue) {
+        document.getElementById('revenueChart').style.display = 'none';
+        document.getElementById('revenueEmpty').style.display = 'block';
+    } else {
+        new Chart(document.getElementById('revenueChart'), {
+            data: {
+                labels: {{ chart_labels|safe }},
+                datasets: [
+                    {
+                        type: 'line', label: 'Выручка ⭐', yAxisID: 'y',
+                        data: revData,
+                        borderColor: '#4b6cff', backgroundColor: 'rgba(75,108,255,.12)',
+                        fill: true, tension: .3
+                    },
+                    {
+                        type: 'bar', label: 'Заказы', yAxisID: 'y1',
+                        data: ordData,
+                        backgroundColor: 'rgba(52,199,89,.45)', borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, position: 'left', title: { display: true, text: '⭐' } },
+                    y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false },
+                          ticks: { precision: 0 }, title: { display: true, text: 'заказы' } }
                 }
-            ]
-        },
-        options: {
-            scales: {
-                y: { beginAtZero: true, position: 'left', title: { display: true, text: '⭐' } },
-                y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false },
-                      ticks: { precision: 0 }, title: { display: true, text: 'заказы' } }
             }
-        }
-    });
+        });
+    }
 
     function doughnut(canvasId, cardId, labels, data) {
         if (!labels.length || data.reduce((a, b) => a + b, 0) === 0) {
