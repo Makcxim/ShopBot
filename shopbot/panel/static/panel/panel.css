@@ -52,15 +52,32 @@ body { margin: 0; background: var(--content-bg); font-family: -apple-system, Bli
 .panel-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-bottom: 20px; }
 .panel-card__title { font-size: 1.05rem; font-weight: 700; margin: 0 0 14px; }
 
-.table-wrap { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.05); overflow: hidden; }
+.table-wrap { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.05); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table-wrap table { margin: 0; }
-.table-wrap thead th { background: #fafbff; font-size: .8rem; text-transform: uppercase; color: #8a90a6; }
+.table-wrap thead th { background: #fafbff; font-size: .8rem; text-transform: uppercase; color: #8a90a6; white-space: nowrap; }
+.table-wrap td { white-space: nowrap; }
+
+/* Таблицы внутри карточек (дашборд) тоже скроллятся по горизонтали */
+.panel-card .table-responsive { margin: 0; }
+.panel-card .table-responsive td, .panel-card .table-responsive th { white-space: nowrap; }
 
 @media (max-width: 768px) {
-    .panel-sidebar { width: 64px; }
-    .panel-brand { font-size: 0; padding: 20px 0; text-align: center; }
-    .panel-brand::first-letter { font-size: 1.5rem; }
+    .panel-sidebar { width: 56px; }
+    .panel-brand { font-size: 0; padding: 18px 0; text-align: center; }
+    .panel-brand::first-letter { font-size: 1.4rem; }
     .panel-nav a span, .panel-nav a { font-size: 0; justify-content: center; }
-    .panel-nav a i { font-size: 1.1rem; }
-    .panel-main { margin-left: 64px; }
+    .panel-nav a i { font-size: 1.15rem; }
+    .panel-main { margin-left: 56px; }
+
+    .panel-header { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
+    .panel-header__title { font-size: 1.1rem; }
+    .panel-header__user { font-size: .82rem; max-width: 45vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .panel-content { padding: 14px; }
+
+    .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .kpi-card { padding: 14px 16px; }
+    .kpi-card__value { font-size: 1.35rem; }
+
+    .panel-card { padding: 16px; }
+    .row > [class^="col-"] { margin-bottom: 0; }
 }

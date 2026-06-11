@@ -19,6 +19,7 @@ body {
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -184,7 +185,9 @@ a { color: inherit; text-decoration: none; }
 .order-card__status.status--refunded { background: rgba(255,59,48,.2); color: #ff3b30; }
 .order-card__date { font-size: .78rem; color: var(--hint); margin: 4px 0 10px; }
 .order-card__items { list-style: none; padding: 0; margin: 0; font-size: .9rem; }
-.order-card__items li { display: flex; justify-content: space-between; padding: 3px 0; }
+.order-card__items li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.order-card__items li > span:first-child { min-width: 0; word-break: break-word; }
+.order-card__items li > span:last-child { white-space: nowrap; flex-shrink: 0; }
 .order-card__keys { flex-direction: column; gap: 4px; }
 .order-card__keys code { display: block; background: rgba(128,128,128,.15); padding: 4px 8px; border-radius: 6px; font-size: .78rem; word-break: break-all; }
 .order-card__total { margin-top: 10px; font-weight: 700; text-align: right; }

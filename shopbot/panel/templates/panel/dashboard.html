@@ -70,6 +70,7 @@
         <div class="panel-card">
             <h2 class="panel-card__title">Топ товаров</h2>
             {% if top_products %}
+            <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <thead><tr><th>Товар</th><th class="text-end">Продано</th><th class="text-end">Выручка</th></tr></thead>
                 <tbody>
@@ -78,6 +79,7 @@
                 {% endfor %}
                 </tbody>
             </table>
+            </div>
             {% else %}<p class="text-muted mb-0">Пока нет продаж</p>{% endif %}
         </div>
     </div>
@@ -85,6 +87,7 @@
         <div class="panel-card">
             <h2 class="panel-card__title">Последние заказы</h2>
             {% if recent_orders %}
+            <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <thead><tr><th>#</th><th>Покупатель</th><th>Статус</th><th class="text-end">Сумма</th></tr></thead>
                 <tbody>
@@ -98,6 +101,7 @@
                 {% endfor %}
                 </tbody>
             </table>
+            </div>
             {% else %}<p class="text-muted mb-0">Заказов нет</p>{% endif %}
         </div>
     </div>
