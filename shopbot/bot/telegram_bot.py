@@ -29,16 +29,20 @@ class SupportReply(StatesGroup):
     waiting = State()
 
 
-@router.message(Command("help", "start"))
-async def command_start_handler(message: Message):
+def _open_shop_markup():
+    """Кнопка «Открыть магазин» (WebApp)."""
     APP_BASE_URL = config('APP_BASE_URL', default='https://google.com')
     MAIN_PAGE_URL = config('MAIN_PAGE_URL', default='main_page')
-
     builder = InlineKeyboardBuilder()
     builder.row(types.InlineKeyboardButton(
         text="🎮 Открыть магазин",
         web_app=WebAppInfo(url=f"{APP_BASE_URL}/{MAIN_PAGE_URL}"),
     ))
+    return builder.as_markup()
+
+
+@router.message(Command("start"))
+async def command_start_handler(message: Message):
     name = html.escape(message.from_user.first_name or 'друг')
     caption = (
         f"👋 Привет, <b>{name}</b>!\n\n"
@@ -48,12 +52,29 @@ async def command_start_handler(message: Message):
         "🔑 Ключи приходят сюда, в чат, сразу после оплаты.\n\n"
         "Жми кнопку ниже, чтобы открыть витрину 👇"
     )
-    markup = builder.as_markup()
+    markup = _open_shop_markup()
 
     if WELCOME_BANNER.exists():
         await message.answer_photo(FSInputFile(WELCOME_BANNER), caption=caption, reply_markup=markup)
     else:
         await message.answer(caption, reply_markup=markup)
+
+
+@router.message(Command("help"))
+async def command_help_handler(message: Message):
+    await message.answer(
+        "ℹ️ <b>Помощь — «Ключник»</b>\n\n"
+        "<b>Как купить:</b>\n"
+        "1. Откройте магазин кнопкой ниже (или командой /start).\n"
+        "2. Добавьте ключи в корзину и оплатите за <b>Telegram Stars</b> ⭐.\n"
+        "3. Ключи придут сюда, в чат, сразу после оплаты.\n\n"
+        "📦 <b>Заказы и возвраты</b> — в приложении: «Профиль → Мои заказы».\n"
+        "💬 <b>Поддержка</b> — «Профиль → Поддержка»: опишите проблему, мы ответим прямо в этом чате.\n\n"
+        "<b>Команды:</b>\n"
+        "/start — открыть магазин\n"
+        "/help — эта справка",
+        reply_markup=_open_shop_markup(),
+    )
 
 
 @router.pre_checkout_query()
