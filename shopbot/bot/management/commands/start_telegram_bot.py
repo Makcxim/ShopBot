@@ -5,6 +5,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ParseMode
+from aiogram.types import MenuButtonWebApp, WebAppInfo
 from decouple import config
 from django.core.management.base import BaseCommand
 
@@ -38,7 +39,15 @@ class Command(BaseCommand):
 
         dp.include_router(router)
 
+        app_base_url = config('APP_BASE_URL', default='https://google.com')
+        main_page_url = config('MAIN_PAGE_URL', default='main_page')
+
         async def startup(dispatcher: Dispatcher, bot: Bot):
+            # Кнопка-меню слева от поля ввода открывает витрину (а не список команд)
+            await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(
+                text='Открыть магазин',
+                web_app=WebAppInfo(url=f'{app_base_url}/{main_page_url}'),
+            ))
             print('Telegram bot started!')
 
         dp.startup.register(startup)
