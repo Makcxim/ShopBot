@@ -1,0 +1,52 @@
+# Запуск:
+#   docker compose up -d --build
+#
+# SSH tunnel (HTTPS через nginx):
+#   ssh -R 9000:127.0.0.1:9000 user@domain
+#
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    env_file: .env
+    ports:
+      - "127.0.0.1:9000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./shopbot:/app/shopbot
+    restart: unless-stopped
+
+  bot:
+    build: .
+    command: python manage.py start_telegram_bot
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./shopbot:/app/shopbot
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

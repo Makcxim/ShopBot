@@ -1,0 +1,6 @@
+{% for item in products %}
+    {% include 'includes/product_card.html' %}
+{% endfor %}
+<div id="page-meta"
+     data-has-next="{{ page_obj.has_next|yesno:'1,0' }}"
+     data-next-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% endif %}"></div>

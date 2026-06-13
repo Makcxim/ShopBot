@@ -1,0 +1,48 @@
+{% extends 'panel/base.html' %}
+
+{% block title %}{{ shop.name }} — Панель{% endblock %}
+{% block heading %}{{ shop.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex gap-2 mb-3">
+    {% if is_owner %}
+        <a href="{% url 'panel_shop_members' shop.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> Сотрудники</a>
+    {% endif %}
+    {% if request.user.is_superuser %}
+        <form method="post" action="{% url 'panel_shop_verify' shop.pk %}">
+            {% csrf_token %}
+            <button class="btn btn-sm {% if shop.is_verified %}btn-outline-warning{% else %}btn-success{% endif %}">
+                {% if shop.is_verified %}Снять проверку{% else %}Подтвердить магазин{% endif %}
+            </button>
+        </form>
+    {% endif %}
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-card__label">Выручка (⭐)</div><div class="kpi-card__value">{{ revenue }}</div></div>
+    <div class="kpi-card"><div class="kpi-card__label">Заказов</div><div class="kpi-card__value">{{ orders_count }}</div></div>
+    <div class="kpi-card"><div class="kpi-card__label">Товаров</div><div class="kpi-card__value">{{ products_count }}</div></div>
+    <div class="kpi-card"><div class="kpi-card__label">Ключей в наличии</div><div class="kpi-card__value">{{ keys_available }}</div></div>
+</div>
+
+<div class="panel-card">
+    <h2 class="panel-card__title">Информация</h2>
+    <p class="mb-1"><strong>Проверен:</strong> {{ shop.is_verified|yesno:"да,нет" }}</p>
+    <p class="mb-1"><strong>Активен:</strong> {{ shop.is_active|yesno:"да,нет" }}</p>
+    {% if shop.description %}<p class="mb-0"><strong>Описание:</strong> {{ shop.description }}</p>{% endif %}
+</div>
+
+<div class="panel-card">
+    <h2 class="panel-card__title">Участники</h2>
+    <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Пользователь</th><th>Роль</th><th>С</th></tr></thead>
+        <tbody>
+        {% for m in members %}
+            <tr><td>{{ m.user }}</td><td>{{ m.get_role_display }}</td><td>{{ m.joined_at|date:"d.m.Y" }}</td></tr>
+        {% empty %}
+            <tr><td colspan="3" class="text-muted">Нет участников</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

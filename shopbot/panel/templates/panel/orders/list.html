@@ -1,0 +1,34 @@
+{% extends 'panel/base.html' %}
+
+{% block title %}Заказы — Панель{% endblock %}
+{% block heading %}Заказы{% endblock %}
+
+{% block content %}
+<form method="get" class="mb-3">
+    <select name="status" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+        <option value="">Все статусы</option>
+        {% for value, label in statuses %}
+            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</form>
+
+<div class="table-wrap">
+    <table class="table align-middle mb-0">
+        <thead><tr><th>#</th><th>Покупатель</th><th>Статус</th><th>Дата</th><th class="text-end">Сумма</th></tr></thead>
+        <tbody>
+        {% for o in orders %}
+            <tr>
+                <td><a href="{% url 'panel_order_detail' o.pk %}">{{ o.pk }}</a></td>
+                <td>{{ o.buyer }}</td>
+                <td><span class="badge text-bg-secondary">{{ o.get_status_display }}</span></td>
+                <td>{{ o.created_at|date:"d.m.Y H:i" }}</td>
+                <td class="text-end">{{ o.total_stars }} ⭐</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-4">Заказов нет</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

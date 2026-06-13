@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Страница не найдена</title>
+    <style>
+        body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+               font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+               background:#f3f3f7; color:#1c1c1e; text-align:center; padding:24px; }
+        .err { max-width:360px; }
+        .err__icon { font-size:4rem; }
+        .err__title { font-size:1.3rem; font-weight:700; margin:14px 0 6px; }
+        .err__text { color:#8e8e93; margin:0 0 22px; }
+        .err__btn { display:inline-block; background:#2481cc; color:#fff; text-decoration:none;
+                    padding:12px 22px; border-radius:12px; font-weight:600; }
+        .err__back { display:block; margin-top:12px; color:#2481cc; background:none; border:none;
+                     font-size:.9rem; cursor:pointer; }
+    </style>
+</head>
+<body>
+    <div class="err">
+        <div class="err__icon">🔍</div>
+        <div class="err__title">Страница не найдена</div>
+        <p class="err__text">Возможно, ссылка устарела или товар больше недоступен.</p>
+        <a href="/" class="err__btn">На главную</a>
+        <button class="err__back" onclick="history.back()">← Назад</button>
+    </div>
+</body>
+</html>

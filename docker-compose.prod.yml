@@ -1,0 +1,55 @@
+# Прод-окружение: gunicorn + DJANGO_ENV=production, без bind-mount кода.
+# Запуск:
+#   docker compose -f docker-compose.prod.yml up -d --build
+# Хостовой nginx проксирует на 127.0.0.1:9000 и раздаёт static/media
+# из ./shopbot/static и ./shopbot/media.
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn shopbot.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    env_file: .env
+    environment:
+      DJANGO_ENV: production
+    ports:
+      - "127.0.0.1:9000:8000"
+    volumes:
+      - ./shopbot/static:/app/shopbot/static
+      - ./shopbot/media:/app/shopbot/media
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  bot:
+    build: .
+    command: python manage.py start_telegram_bot
+    env_file: .env
+    environment:
+      DJANGO_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

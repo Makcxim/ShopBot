@@ -1,9 +1,12 @@
 .*/
 
 __pycache__/
-products/
+shopbot/media/
 
 .env
 
 .venv/
 .idea/
+
+shopbot/static/
+deploy.sh

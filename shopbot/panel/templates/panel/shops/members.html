@@ -1,0 +1,51 @@
+{% extends 'panel/base.html' %}
+
+{% block title %}Сотрудники — {{ shop.name }}{% endblock %}
+{% block heading %}Сотрудники: {{ shop.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-5">
+        <div class="panel-card">
+            <h2 class="panel-card__title">Добавить сотрудника</h2>
+            {% if error %}<div class="alert alert-danger py-2">{{ error }}</div>{% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">{{ form.identifier.label }}</label>
+                    {{ form.identifier }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Роль</label>
+                    {{ form.role }}
+                </div>
+                <button class="btn btn-primary">Добавить</button>
+                <a href="{% url 'panel_shop_detail' shop.pk %}" class="btn btn-outline-secondary">Назад</a>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="table-wrap">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Пользователь</th><th>Роль</th><th></th></tr></thead>
+                <tbody>
+                {% for m in members %}
+                    <tr>
+                        <td>{{ m.user }}</td>
+                        <td>{{ m.get_role_display }}</td>
+                        <td class="text-end">
+                            {% if m.role == 'staff' %}
+                            <form method="post" action="{% url 'panel_member_remove' shop.pk m.id %}" onsubmit="return confirm('Удалить сотрудника?')">
+                                {% csrf_token %}
+                                <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                            </form>
+                            {% else %}<span class="text-muted small">владелец</span>{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

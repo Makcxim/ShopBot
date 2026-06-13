@@ -1,0 +1,22 @@
+{% extends 'panel/base.html' %}
+
+{% block title %}Новый магазин — Панель{% endblock %}
+{% block heading %}Создать магазин{% endblock %}
+
+{% block content %}
+<div class="panel-card" style="max-width: 640px;">
+    <p class="text-muted">После создания магазин отправится на проверку администратору. Вы станете его владельцем.</p>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Создать</button>
+        <a href="{% url 'panel_shops' %}" class="btn btn-outline-secondary">Отмена</a>
+    </form>
+</div>
+{% endblock %}

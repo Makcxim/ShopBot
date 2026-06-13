@@ -1,0 +1,354 @@
+import html
+import json
+
+import requests
+from decouple import config
+from django.contrib.auth import login
+from django.shortcuts import get_object_or_404
+from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    """Сессионная аутентификация без CSRF — для WebApp-эндпоинтов.
+
+    Telegram WebApp кэширует HTML, из-за чего csrf-токен в странице расходится
+    с cookie. Запросы идут с того же домена, пользователь действует над своими
+    же данными, поэтому CSRF-проверку отключаем (как и у эндпоинтов корзины).
+    """
+
+    def enforce_csrf(self, request):
+        return
+
+from . import cart as cart_utils
+from .models import (
+    Order, Product, ProductKey, ShopMembership, SupportMessage, SupportTicket, TelegramUser,
+)
+from .serializers import CartItemSerializer, TelegramUserSerializer
+from .telegram_auth import validate_init_data
+
+
+def _telegram_api_url(method):
+    """URL метода Bot API с учётом тестового окружения."""
+    base = config('TELEGRAM_API_URL', default='https://api.telegram.org/bot')
+    token = config('TELEGRAM_BOT_TOKEN', default='123')
+    test = '/test' if config('TELEGRAM_TEST', default=False, cast=bool) else ''
+    return f'{base}{token}{test}/{method}'
+
+
+def _send_message(chat_id, text, reply_markup=None):
+    """Отправляет HTML-сообщение в чат через Bot API. Ошибки глушим."""
+    if not chat_id:
+        return
+    payload = {'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'}
+    if reply_markup is not None:
+        payload['reply_markup'] = reply_markup
+    try:
+        requests.post(_telegram_api_url('sendMessage'), json=payload, timeout=5)
+    except requests.RequestException:
+        pass
+
+
+def _notify_support(ticket, body):
+    """Шлёт обращение в чат поддержки (SUPPORT_CHAT_ID) с кнопкой «Ответить»."""
+    chat_id = config('SUPPORT_CHAT_ID', default='')
+    if not chat_id:
+        return
+    text = (
+        f"🆘 <b>Обращение #{ticket.id}</b>\n"
+        f"👤 {_user_label(ticket.user)}\n"
+        f"📌 {ticket.get_status_display()}\n\n"
+        f"{body}"
+    )
+    markup = {'inline_keyboard': [[
+        {'text': '✍️ Ответить', 'callback_data': f'support_reply:{ticket.id}'}
+    ]]}
+    _send_message(chat_id, text, reply_markup=markup)
+
+
+def _user_label(user):
+    return user.telegram_username or user.username or f'tg_{user.telegram_id}'
+
+
+def _message_data(m):
+    return {
+        'id': m.id, 'is_staff': m.is_staff, 'text': m.text,
+        'created_at': m.created_at.strftime('%d.%m.%Y %H:%M'),
+    }
+
+
+def _ticket_data(t):
+    return {
+        'id': t.id, 'subject': t.subject, 'status': t.status,
+        'status_display': t.get_status_display(),
+        'created_at': t.created_at.strftime('%d.%m.%Y %H:%M'),
+        'messages': [_message_data(m) for m in t.messages.all()],
+    }
+
+
+class TelegramAuthView(APIView):
+    """POST /api/auth/telegram/ — авторизация по initData из Telegram WebApp."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        init_data = request.data.get('init_data', '')
+        tg_user = validate_init_data(init_data)
+        if tg_user is None:
+            return Response(
+                {'detail': 'Некорректные данные авторизации'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        telegram_id = tg_user.get('id')
+        username = tg_user.get('username') or f'tg_{telegram_id}'
+
+        user, _ = TelegramUser.objects.get_or_create(
+            telegram_id=telegram_id,
+            defaults={
+                'username': username,
+                'telegram_username': tg_user.get('username', '') or '',
+                'first_name': tg_user.get('first_name', '') or '',
+                'last_name': tg_user.get('last_name', '') or '',
+                'avatar_url': tg_user.get('photo_url', '') or '',
+            },
+        )
+
+        login(request._request, user, backend='django.contrib.auth.backends.ModelBackend')
+        return Response(TelegramUserSerializer(user).data)
+
+
+class CartAddView(APIView):
+    """POST /api/cart/add/ — добавить товар в корзину (сессия)."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = CartItemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        cart_utils.add_to_cart(request.session, data['product_id'], data['quantity'])
+        return Response({'cart_count': cart_utils.cart_count(request.session)})
+
+
+class CartRemoveView(APIView):
+    """POST /api/cart/remove/ — удалить товар из корзины."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        product_id = request.data.get('product_id')
+        cart_utils.remove_from_cart(request.session, product_id)
+        return Response({'cart_count': cart_utils.cart_count(request.session)})
+
+
+class CartSetView(APIView):
+    """POST /api/cart/set/ — задать количество товара (0 — удалить)."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            product_id = int(request.data.get('product_id'))
+            quantity = int(request.data.get('quantity'))
+        except (TypeError, ValueError):
+            return Response({'detail': 'Некорректные данные'}, status=status.HTTP_400_BAD_REQUEST)
+
+        product = Product.objects.filter(id=product_id).first()
+        if product and quantity > product.stock:
+            quantity = product.stock  # не больше, чем в наличии
+
+        cart_utils.set_quantity(request.session, product_id, quantity)
+        _, total = cart_utils.cart_items(request.session)
+        subtotal = (product.price_stars * quantity) if product else 0
+        return Response({
+            'cart_count': cart_utils.cart_count(request.session),
+            'quantity': max(quantity, 0),
+            'subtotal': subtotal,
+            'total': total,
+        })
+
+
+class CartClearView(APIView):
+    """POST /api/cart/clear/ — очистить корзину (после успешной оплаты)."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        cart_utils.save_cart(request.session, {})
+        return Response({'cart_count': 0})
+
+
+class CreateInvoiceView(APIView):
+    """POST /api/create-invoice/ — создаёт ссылку на оплату Telegram Stars из корзины."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        items, total = cart_utils.cart_items(request.session)
+        if not items:
+            return Response({'detail': 'Корзина пуста'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Проверка наличия ключей
+        for item in items:
+            if item['product'].stock < item['quantity']:
+                return Response(
+                    {'detail': f'Недостаточно ключей: {item["product"].name}'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        payload = [
+            {'product_id': item['product'].id, 'quantity': item['quantity']}
+            for item in items
+        ]
+
+        response = requests.post(
+            _telegram_api_url('createInvoiceLink'),
+            json={
+                'title': 'Оплата заказа',
+                'description': 'Покупка цифровых ключей',
+                'payload': json.dumps(payload),
+                'provider_token': '',       # для Stars провайдер не нужен
+                'currency': 'XTR',          # Telegram Stars
+                'prices': [{'label': 'Заказ', 'amount': total}],  # целое число звёзд
+            },
+        )
+        result = response.json()
+        if not result.get('ok'):
+            return Response(
+                {'detail': 'Не удалось создать счёт', 'telegram': result},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response({'invoice_link': result['result']})
+
+
+class RefundOrderView(APIView):
+    """POST /api/orders/<pk>/refund/ — возврат звёзд покупателю (refundStarPayment).
+
+    Покупатель может вернуть свой оплаченный заказ. Ключи возвращаются в наличие,
+    заказ помечается как возвращённый.
+    """
+
+    authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk, buyer=request.user)
+
+        if order.status == Order.Status.REFUNDED:
+            return Response({'detail': 'Заказ уже возвращён'}, status=status.HTTP_400_BAD_REQUEST)
+        if order.status not in (Order.Status.PAID, Order.Status.DELIVERED):
+            return Response({'detail': 'Этот заказ нельзя вернуть'}, status=status.HTTP_400_BAD_REQUEST)
+        if not order.telegram_payment_charge_id:
+            return Response({'detail': 'Нет данных платежа для возврата'}, status=status.HTTP_400_BAD_REQUEST)
+
+        response = requests.post(
+            _telegram_api_url('refundStarPayment'),
+            json={
+                'user_id': request.user.telegram_id,
+                'telegram_payment_charge_id': order.telegram_payment_charge_id,
+            },
+        )
+        result = response.json()
+        if not result.get('ok'):
+            return Response(
+                {'detail': 'Telegram отклонил возврат', 'telegram': result},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        # Возвращаем ключи в наличие и помечаем заказ возвращённым
+        for item in order.items.all():
+            ProductKey.objects.filter(order_item=item).update(
+                is_sold=False, sold_at=None, order_item=None
+            )
+        order.status = Order.Status.REFUNDED
+        order.save(update_fields=['status'])
+
+        self._notify(order, request.user)
+
+        return Response({'status': 'refunded'})
+
+    @staticmethod
+    def _notify(order, buyer):
+        """Сообщения о возврате: сочувствие покупателю + уведомление продавцам."""
+        _send_message(
+            buyer.telegram_id,
+            "😔 <b>Возврат оформлен</b>\n\n"
+            f"Нам очень жаль, что заказ <b>#{order.id}</b> вам не подошёл.\n"
+            f"Мы вернули <b>{order.total_stars} ⭐</b> — они уже на вашем балансе Telegram.\n\n"
+            "Если что-то пошло не так — напишите нам, мы поможем. "
+            "Будем рады видеть вас снова! 💜",
+        )
+
+        shop_ids = set(order.items.values_list('shop_id', flat=True))
+        owner_ids = (
+            ShopMembership.objects.filter(
+                shop_id__in=shop_ids, role=ShopMembership.Role.OWNER
+            )
+            .values_list('user__telegram_id', flat=True)
+            .distinct()
+        )
+        buyer_name = buyer.telegram_username or buyer.username or f'tg_{buyer.telegram_id}'
+        text = (
+            "↩️ <b>Возврат по заказу</b>\n\n"
+            f"🧾 Заказ <b>#{order.id}</b> на <b>{order.total_stars} ⭐</b> возвращён покупателем.\n"
+            f"👤 Покупатель: {buyer_name}\n\n"
+            "Ключи из заказа возвращены в наличие."
+        )
+        for owner_id in owner_ids:
+            _send_message(owner_id, text)
+
+
+class SupportTicketsView(APIView):
+    """GET — список обращений пользователя; POST — новое обращение."""
+
+    authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tickets = request.user.support_tickets.prefetch_related('messages')
+        return Response([_ticket_data(t) for t in tickets])
+
+    def post(self, request):
+        text = (request.data.get('text') or '').strip()
+        if not text:
+            return Response({'detail': 'Введите текст обращения'}, status=status.HTTP_400_BAD_REQUEST)
+        text = text[:4000]
+
+        ticket = SupportTicket.objects.create(user=request.user, subject=text[:500])
+        SupportMessage.objects.create(ticket=ticket, is_staff=False, text=text)
+        _notify_support(ticket, html.escape(ticket.subject))
+        return Response(_ticket_data(ticket), status=status.HTTP_201_CREATED)
+
+
+class SupportMessageView(APIView):
+    """POST — добавить сообщение в обращение (старые не редактируются)."""
+
+    authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        ticket = get_object_or_404(SupportTicket, pk=pk, user=request.user)
+        if ticket.status == SupportTicket.Status.CLOSED:
+            return Response({'detail': 'Обращение закрыто'}, status=status.HTTP_400_BAD_REQUEST)
+
+        text = (request.data.get('text') or '').strip()
+        if not text:
+            return Response({'detail': 'Введите текст сообщения'}, status=status.HTTP_400_BAD_REQUEST)
+        text = text[:4000]
+
+        SupportMessage.objects.create(ticket=ticket, is_staff=False, text=text)
+        # Новое сообщение пользователя — снова ждём ответ поддержки
+        ticket.status = SupportTicket.Status.OPEN
+        ticket.save(update_fields=['status', 'updated_at'])
+        _notify_support(ticket, html.escape(text[:500]))
+        return Response(_ticket_data(ticket), status=status.HTTP_201_CREATED)

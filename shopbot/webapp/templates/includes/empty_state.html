@@ -1,0 +1,5 @@
+<div class="empty-state text-center py-5">
+    <div class="empty-state__icon">{{ icon|default:"🤷" }}</div>
+    <h2 class="h5 mt-3">{{ title|default:"Ничего не найдено" }}</h2>
+    {% if subtitle %}<p class="text-secondary mb-0">{{ subtitle }}</p>{% endif %}
+</div>

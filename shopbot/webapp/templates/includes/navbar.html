@@ -1,0 +1,23 @@
+{% url 'catalog' as catalog_url %}
+{% url 'cart' as cart_url %}
+{% url 'orders' as orders_url %}
+{% url 'profile' as profile_url %}
+<nav class="bottom-nav">
+    <a href="{{ catalog_url }}" class="bottom-nav__item {% if request.path == catalog_url %}is-active{% endif %}">
+        <span class="bottom-nav__icon">🛍️</span>
+        <span class="bottom-nav__label">Каталог</span>
+    </a>
+    <a href="{{ cart_url }}" class="bottom-nav__item {% if request.path == cart_url %}is-active{% endif %}">
+        <span class="bottom-nav__icon">🛒</span>
+        <span class="bottom-nav__label">Корзина</span>
+        <span class="bottom-nav__badge {% if not cart_count %}d-none{% endif %}" id="cart-badge">{{ cart_count }}</span>
+    </a>
+    <a href="{{ orders_url }}" class="bottom-nav__item {% if request.path == orders_url %}is-active{% endif %}">
+        <span class="bottom-nav__icon">📦</span>
+        <span class="bottom-nav__label">Заказы</span>
+    </a>
+    <a href="{{ profile_url }}" class="bottom-nav__item {% if request.path == profile_url %}is-active{% endif %}">
+        <span class="bottom-nav__icon">👤</span>
+        <span class="bottom-nav__label">Профиль</span>
+    </a>
+</nav>

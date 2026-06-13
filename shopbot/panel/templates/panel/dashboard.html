@@ -1,0 +1,169 @@
+{% extends 'panel/base.html' %}
+
+{% block title %}Дашборд — Панель{% endblock %}
+{% block heading %}Дашборд{% endblock %}
+
+{% block content %}
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-card__label">Выручка (⭐)</div>
+        <div class="kpi-card__value">{{ revenue }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card__label">Заказов оплачено</div>
+        <div class="kpi-card__value">{{ orders_count }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card__label">Ключей продано</div>
+        <div class="kpi-card__value">{{ keys_sold }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card__label">Ключей в наличии</div>
+        <div class="kpi-card__value">{{ keys_available }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card__label">Товаров</div>
+        <div class="kpi-card__value">{{ products_count }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card__label">Магазинов</div>
+        <div class="kpi-card__value">{{ shops_count }}</div>
+    </div>
+    {% if users_count is not None %}
+    <div class="kpi-card">
+        <div class="kpi-card__label">Пользователей</div>
+        <div class="kpi-card__value">{{ users_count }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="panel-card">
+    <h2 class="panel-card__title">Выручка и заказы за 14 дней</h2>
+    <canvas id="revenueChart" height="80"></canvas>
+    <p id="revenueEmpty" class="text-muted text-center mb-0 py-5" style="display:none">Пока нет продаж за этот период</p>
+</div>
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="panel-card" id="card-category">
+            <h2 class="panel-card__title">Выручка по категориям</h2>
+            <canvas id="categoryChart" height="220"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="panel-card" id="card-status">
+            <h2 class="panel-card__title">Статусы заказов</h2>
+            <canvas id="statusChart" height="220"></canvas>
+        </div>
+    </div>
+    {% if is_super %}
+    <div class="col-lg-4">
+        <div class="panel-card" id="card-shop">
+            <h2 class="panel-card__title">Выручка по магазинам</h2>
+            <canvas id="shopChart" height="220"></canvas>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="panel-card">
+            <h2 class="panel-card__title">Топ товаров</h2>
+            {% if top_products %}
+            <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead><tr><th>Товар</th><th class="text-end">Продано</th><th class="text-end">Выручка</th></tr></thead>
+                <tbody>
+                {% for p in top_products %}
+                    <tr><td>{{ p.product__name }}</td><td class="text-end">{{ p.qty }}</td><td class="text-end">{{ p.revenue }} ⭐</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}<p class="text-muted mb-0">Пока нет продаж</p>{% endif %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="panel-card">
+            <h2 class="panel-card__title">Последние заказы</h2>
+            {% if recent_orders %}
+            <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead><tr><th>#</th><th>Покупатель</th><th>Статус</th><th class="text-end">Сумма</th></tr></thead>
+                <tbody>
+                {% for o in recent_orders %}
+                    <tr>
+                        <td><a href="{% url 'panel_order_detail' o.pk %}">{{ o.pk }}</a></td>
+                        <td>{{ o.buyer }}</td>
+                        <td><span class="badge text-bg-secondary">{{ o.get_status_display }}</span></td>
+                        <td class="text-end">{{ o.total_stars }} ⭐</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}<p class="text-muted mb-0">Заказов нет</p>{% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const PALETTE = ['#4b6cff', '#34c759', '#ff9500', '#ff3b30', '#af52de', '#5ac8fa', '#ffcc00', '#8e8e93'];
+
+    // Выручка (линия) + заказы (столбцы) на двух осях
+    const revData = {{ chart_data|safe }};
+    const ordData = {{ orders_chart_data|safe }};
+    const hasRevenue = revData.concat(ordData).some(v => v > 0);
+    if (!hasRevenue) {
+        document.getElementById('revenueChart').style.display = 'none';
+        document.getElementById('revenueEmpty').style.display = 'block';
+    } else {
+        new Chart(document.getElementById('revenueChart'), {
+            data: {
+                labels: {{ chart_labels|safe }},
+                datasets: [
+                    {
+                        type: 'line', label: 'Выручка ⭐', yAxisID: 'y',
+                        data: revData,
+                        borderColor: '#4b6cff', backgroundColor: 'rgba(75,108,255,.12)',
+                        fill: true, tension: .3
+                    },
+                    {
+                        type: 'bar', label: 'Заказы', yAxisID: 'y1',
+                        data: ordData,
+                        backgroundColor: 'rgba(52,199,89,.45)', borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, position: 'left', title: { display: true, text: '⭐' } },
+                    y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false },
+                          ticks: { precision: 0 }, title: { display: true, text: 'заказы' } }
+                }
+            }
+        });
+    }
+
+    function doughnut(canvasId, cardId, labels, data) {
+        if (!labels.length || data.reduce((a, b) => a + b, 0) === 0) {
+            const card = document.getElementById(cardId);
+            if (card) card.style.display = 'none';
+            return;
+        }
+        new Chart(document.getElementById(canvasId), {
+            type: 'doughnut',
+            data: { labels: labels, datasets: [{ data: data, backgroundColor: PALETTE }] },
+            options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+        });
+    }
+
+    doughnut('categoryChart', 'card-category', {{ cat_labels|safe }}, {{ cat_data|safe }});
+    doughnut('statusChart', 'card-status', {{ status_labels|safe }}, {{ status_data|safe }});
+    {% if is_super %}doughnut('shopChart', 'card-shop', {{ shop_labels|safe }}, {{ shop_data|safe }});{% endif %}
+</script>
+{% endblock %}
