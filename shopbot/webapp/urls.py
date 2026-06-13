@@ -23,7 +23,6 @@ urlpatterns = [
     path('category/<slug:category_slug>/', views.catalog_view, name='catalog_by_category'),
     path('cart/', views.cart_view, name='cart'),
     path('orders/', views.orders_view, name='orders'),
-    path('privacy/', views.privacy_view, name='privacy'),
     path('support/', views.support_view, name='support'),
     path('support/<int:pk>/', views.support_thread_view, name='support_thread'),
     path('profile/', views.profile_view, name='profile'),
