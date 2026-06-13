@@ -9,5 +9,4 @@ shopbot/media/
 .idea/
 
 shopbot/static/
-.claude
 deploy.sh

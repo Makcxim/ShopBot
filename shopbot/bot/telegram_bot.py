@@ -1,3 +1,4 @@
+import html
 import json
 
 from aiogram import Bot, F, Router, types
@@ -22,11 +23,17 @@ async def command_start_handler(message: Message):
 
     builder = InlineKeyboardBuilder()
     builder.row(types.InlineKeyboardButton(
-        text="Открыть магазин",
+        text="🎮 Открыть магазин",
         web_app=WebAppInfo(url=f"{APP_BASE_URL}/{MAIN_PAGE_URL}"),
     ))
+    name = html.escape(message.from_user.first_name or 'друг')
     await message.answer(
-        "Вас приветствует маркетплейс цифровых ключей! Покупайте ключи за Telegram Stars ⭐",
+        f"👋 Привет, <b>{name}</b>!\n\n"
+        "Это <b>маркетплейс цифровых ключей</b> для игр 🎮\n"
+        "Тысячи ключей от разных магазинов — покупка в пару кликов прямо в Telegram.\n\n"
+        "💳 Карта не нужна: оплата за <b>Telegram Stars</b> ⭐\n"
+        "🔑 Ключи приходят сюда, в чат, сразу после оплаты.\n\n"
+        "Жми кнопку ниже, чтобы открыть витрину 👇",
         reply_markup=builder.as_markup(),
     )
 
@@ -101,14 +108,15 @@ def _process_payment(telegram_id, telegram_username, full_name, payload, total_s
         telegram_payment_charge_id=charge_id,
     )
 
-    thx_msg = f"Спасибо за покупку на {total_stars} ⭐!\n"
-    keys_msg = "Ваши ключи:\n"
+    order_lines = []     # строки состава заказа для чека
+    keys_blocks = []     # блоки с ключами по товарам
     # Сводка продаж по магазинам для уведомления владельцев: shop_id -> (shop, [строки])
     shop_sales = {}
 
-    for index, item in enumerate(payload, start=1):
+    for item in payload:
         product = Product.objects.get(id=item['product_id'])
         quantity = int(item['quantity'])
+        name = html.escape(product.name)
 
         order_item = OrderItem.objects.create(
             order=order,
@@ -134,23 +142,47 @@ def _process_payment(telegram_id, telegram_username, full_name, payload, total_s
         order_item.delivered_keys = key_values
         order_item.save(update_fields=['delivered_keys'])
 
-        thx_msg += f"{index}) {product.name} — {quantity} шт. по {product.price_stars} ⭐\n"
-        for n, key in enumerate(key_values, start=1):
-            keys_msg += f"Ключ №{n} от {product.name}: {key}\n"
+        order_lines.append(f"• {name} — {quantity} × {product.price_stars} ⭐")
+
+        keys_lines = "\n".join(f"<code>{html.escape(k)}</code>" for k in key_values)
+        keys_blocks.append(f"🎮 <b>{name}</b>\n{keys_lines}")
 
         entry = shop_sales.setdefault(product.shop_id, (product.shop, []))
-        entry[1].append(f"• {product.name} × {quantity} = {product.price_stars * quantity} ⭐")
+        entry[1].append(f"• {name} × {quantity} = {product.price_stars * quantity} ⭐")
 
     order.status = Order.Status.DELIVERED
     order.save(update_fields=['status'])
 
+    thx_msg = (
+        "✅ <b>Оплата прошла успешно!</b>\n\n"
+        f"🧾 Заказ <b>#{order.id}</b> · оплачено <b>{total_stars} ⭐</b>\n\n"
+        "<b>Состав заказа:</b>\n" + "\n".join(order_lines)
+    )
+    keys_msg = (
+        "🔑 <b>Ваши ключи</b>\n\n"
+        + "\n\n".join(keys_blocks)
+        + "\n\n<i>Нажмите на ключ, чтобы скопировать. Сохраните его в надёжном месте.</i>"
+    )
+
     # Формируем уведомления владельцам (один владелец может иметь несколько магазинов)
     notifications = []
+    buyer_name = html.escape(full_name or telegram_username or f'tg_{telegram_id}')
     for shop, lines in shop_sales.values():
         owner_ids = ShopMembership.objects.filter(
             shop=shop, role=ShopMembership.Role.OWNER
         ).values_list('user__telegram_id', flat=True)
-        text = f"🛒 Новая продажа в «{shop.name}» (заказ #{order.id}):\n" + "\n".join(lines)
+        shop_total = sum(
+            oi.price_stars * oi.quantity
+            for oi in order.items.all() if oi.shop_id == shop.id
+        )
+        text = (
+            "🛒 <b>Новая продажа!</b>\n\n"
+            f"🏪 Магазин: <b>{html.escape(shop.name)}</b>\n"
+            f"🧾 Заказ: <b>#{order.id}</b>\n"
+            f"👤 Покупатель: {buyer_name}\n\n"
+            + "\n".join(lines)
+            + f"\n\n💰 <b>Итого: {shop_total} ⭐</b>"
+        )
         for owner_id in owner_ids:
             if owner_id:
                 notifications.append((owner_id, text))

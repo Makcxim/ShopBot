@@ -1,8 +1,10 @@
 import asyncio
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
+from aiogram.enums import ParseMode
 from decouple import config
 from django.core.management.base import BaseCommand
 
@@ -17,6 +19,7 @@ class Command(BaseCommand):
 
         TOKEN = config('TELEGRAM_BOT_TOKEN', default='TOKEN')
         dp = Dispatcher()
+        default = DefaultBotProperties(parse_mode=ParseMode.HTML)
 
         # Тестовое окружение Telegram (бесплатные Stars): TELEGRAM_TEST=True в .env.
         # В тест-режиме методы вызываются по пути /bot<token>/test/<method>.
@@ -25,10 +28,10 @@ class Command(BaseCommand):
                 base='https://api.telegram.org/bot{token}/test/{method}',
                 file='https://api.telegram.org/file/bot{token}/test/{path}',
             )
-            dp_bot = Bot(TOKEN, session=AiohttpSession(api=test_server))
+            dp_bot = Bot(TOKEN, session=AiohttpSession(api=test_server), default=default)
             print('Bot running in TEST environment')
         else:
-            dp_bot = Bot(TOKEN)
+            dp_bot = Bot(TOKEN, default=default)
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)

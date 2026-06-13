@@ -67,6 +67,17 @@ class Shop(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def avatar_letter(self):
+        """Первая буква названия для дефолтной аватарки."""
+        name = self.name.strip()
+        return name[0].upper() if name else '🏪'
+
+    @property
+    def avatar_hue(self):
+        """Детерминированный оттенок (0–359) для градиента аватарки по названию."""
+        return (sum(ord(c) for c in self.name) * 47) % 360
+
 
 class ShopMembership(models.Model):
     """Связь пользователя с магазином и его роль в нём."""

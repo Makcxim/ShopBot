@@ -8,7 +8,7 @@
         {% if shop.logo %}
             <img src="{{ shop.logo.url }}" alt="{{ shop.name }}">
         {% else %}
-            <div class="shop-header__placeholder">🏪</div>
+            <div class="shop-header__placeholder" style="--hue: {{ shop.avatar_hue }}">{{ shop.avatar_letter }}</div>
         {% endif %}
     </div>
     <h1 class="shop-header__name">

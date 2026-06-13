@@ -198,7 +198,11 @@ a { color: inherit; text-decoration: none; }
 .shop-header { text-align: center; padding: 8px 0 4px; }
 .shop-header__logo { width: 88px; height: 88px; border-radius: 50%; overflow: hidden; margin: 0 auto 12px; background: var(--card-bg); }
 .shop-header__logo img { width: 100%; height: 100%; object-fit: cover; }
-.shop-header__placeholder { font-size: 2.6rem; }
+.shop-header__logo .shop-header__placeholder {
+    font-size: 2.4rem; font-weight: 800; color: #fff; letter-spacing: .5px;
+    background: linear-gradient(135deg, hsl(var(--hue, 220), 75%, 58%), hsl(calc(var(--hue, 220) + 45), 80%, 46%));
+    text-shadow: 0 1px 2px rgba(0,0,0,.18);
+}
 .shop-header__name { font-size: 1.3rem; font-weight: 700; margin: 0; }
 .shop-header__desc { font-size: .9rem; color: var(--hint); margin: 8px 0 0; }
 
