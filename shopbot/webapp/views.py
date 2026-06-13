@@ -108,6 +108,11 @@ def orders_view(request):
     return render(request, 'orders.html', context)
 
 
+def privacy_view(request):
+    """Политика конфиденциальности (URL для BotFather)."""
+    return render(request, 'privacy.html', _base_context(request))
+
+
 @ensure_csrf_cookie
 def support_view(request):
     """Список обращений пользователя + форма нового обращения."""
