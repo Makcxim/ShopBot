@@ -1,10 +1,11 @@
 import html
 import json
+from pathlib import Path
 
 from aiogram import Bot, F, Router, types
 from aiogram.enums import ContentType
 from aiogram.filters import Command
-from aiogram.types import Message, PreCheckoutQuery, WebAppInfo
+from aiogram.types import FSInputFile, Message, PreCheckoutQuery, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from asgiref.sync import sync_to_async
 from decouple import config
@@ -14,6 +15,8 @@ from django.utils import timezone
 from webapp.models import Order, OrderItem, Product, ProductKey, ShopMembership, TelegramUser
 
 router = Router(name=__name__)
+
+WELCOME_BANNER = Path(__file__).resolve().parent / 'assets' / 'welcome.png'
 
 
 @router.message(Command("help", "start"))
@@ -27,15 +30,20 @@ async def command_start_handler(message: Message):
         web_app=WebAppInfo(url=f"{APP_BASE_URL}/{MAIN_PAGE_URL}"),
     ))
     name = html.escape(message.from_user.first_name or 'друг')
-    await message.answer(
+    caption = (
         f"👋 Привет, <b>{name}</b>!\n\n"
         "Это <b>маркетплейс цифровых ключей</b> для игр 🎮\n"
         "Тысячи ключей от разных магазинов — покупка в пару кликов прямо в Telegram.\n\n"
         "💳 Карта не нужна: оплата за <b>Telegram Stars</b> ⭐\n"
         "🔑 Ключи приходят сюда, в чат, сразу после оплаты.\n\n"
-        "Жми кнопку ниже, чтобы открыть витрину 👇",
-        reply_markup=builder.as_markup(),
+        "Жми кнопку ниже, чтобы открыть витрину 👇"
     )
+    markup = builder.as_markup()
+
+    if WELCOME_BANNER.exists():
+        await message.answer_photo(FSInputFile(WELCOME_BANNER), caption=caption, reply_markup=markup)
+    else:
+        await message.answer(caption, reply_markup=markup)
 
 
 @router.pre_checkout_query()
@@ -154,14 +162,16 @@ def _process_payment(telegram_id, telegram_username, full_name, payload, total_s
     order.save(update_fields=['status'])
 
     thx_msg = (
-        "✅ <b>Оплата прошла успешно!</b>\n\n"
-        f"🧾 Заказ <b>#{order.id}</b> · оплачено <b>{total_stars} ⭐</b>\n\n"
+        "🎉 <b>Спасибо за покупку!</b>\n\n"
+        f"✅ Оплата прошла успешно — заказ <b>#{order.id}</b> на <b>{total_stars} ⭐</b>.\n\n"
         "<b>Состав заказа:</b>\n" + "\n".join(order_lines)
+        + "\n\nВаши ключи — в следующем сообщении 👇"
     )
     keys_msg = (
         "🔑 <b>Ваши ключи</b>\n\n"
         + "\n\n".join(keys_blocks)
-        + "\n\n<i>Нажмите на ключ, чтобы скопировать. Сохраните его в надёжном месте.</i>"
+        + "\n\n<i>Нажмите на ключ, чтобы скопировать. Сохраните его в надёжном месте.</i>\n"
+        "Приятной игры! 🎮"
     )
 
     # Формируем уведомления владельцам (один владелец может иметь несколько магазинов)

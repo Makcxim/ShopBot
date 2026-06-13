@@ -23,7 +23,7 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
         return
 
 from . import cart as cart_utils
-from .models import Order, Product, ProductKey, TelegramUser
+from .models import Order, Product, ProductKey, ShopMembership, TelegramUser
 from .serializers import CartItemSerializer, TelegramUserSerializer
 from .telegram_auth import validate_init_data
 
@@ -34,6 +34,20 @@ def _telegram_api_url(method):
     token = config('TELEGRAM_BOT_TOKEN', default='123')
     test = '/test' if config('TELEGRAM_TEST', default=False, cast=bool) else ''
     return f'{base}{token}{test}/{method}'
+
+
+def _send_message(chat_id, text):
+    """Отправляет HTML-сообщение в чат через Bot API. Ошибки глушим."""
+    if not chat_id:
+        return
+    try:
+        requests.post(
+            _telegram_api_url('sendMessage'),
+            json={'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'},
+            timeout=5,
+        )
+    except requests.RequestException:
+        pass
 
 
 class TelegramAuthView(APIView):
@@ -220,4 +234,36 @@ class RefundOrderView(APIView):
         order.status = Order.Status.REFUNDED
         order.save(update_fields=['status'])
 
+        self._notify(order, request.user)
+
         return Response({'status': 'refunded'})
+
+    @staticmethod
+    def _notify(order, buyer):
+        """Сообщения о возврате: сочувствие покупателю + уведомление продавцам."""
+        _send_message(
+            buyer.telegram_id,
+            "😔 <b>Возврат оформлен</b>\n\n"
+            f"Нам очень жаль, что заказ <b>#{order.id}</b> вам не подошёл.\n"
+            f"Мы вернули <b>{order.total_stars} ⭐</b> — они уже на вашем балансе Telegram.\n\n"
+            "Если что-то пошло не так — напишите нам, мы поможем. "
+            "Будем рады видеть вас снова! 💜",
+        )
+
+        shop_ids = set(order.items.values_list('shop_id', flat=True))
+        owner_ids = (
+            ShopMembership.objects.filter(
+                shop_id__in=shop_ids, role=ShopMembership.Role.OWNER
+            )
+            .values_list('user__telegram_id', flat=True)
+            .distinct()
+        )
+        buyer_name = buyer.telegram_username or buyer.username or f'tg_{buyer.telegram_id}'
+        text = (
+            "↩️ <b>Возврат по заказу</b>\n\n"
+            f"🧾 Заказ <b>#{order.id}</b> на <b>{order.total_stars} ⭐</b> возвращён покупателем.\n"
+            f"👤 Покупатель: {buyer_name}\n\n"
+            "Ключи из заказа возвращены в наличие."
+        )
+        for owner_id in owner_ids:
+            _send_message(owner_id, text)
