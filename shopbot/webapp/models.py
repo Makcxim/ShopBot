@@ -251,3 +251,54 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f'{self.product.name} x{self.quantity}'
+
+
+class SupportTicket(models.Model):
+    """Обращение в поддержку. Тред сообщений между пользователем и поддержкой."""
+
+    class Status(models.TextChoices):
+        OPEN = 'open', 'Ожидает ответа'
+        ANSWERED = 'answered', 'Есть ответ поддержки'
+        CLOSED = 'closed', 'Закрыт'
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='support_tickets',
+        verbose_name='Пользователь',
+    )
+    subject = models.CharField('Тема', max_length=500)
+    status = models.CharField('Статус', max_length=10, choices=Status.choices, default=Status.OPEN)
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Обращение'
+        verbose_name_plural = 'Обращения'
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f'Обращение #{self.pk} — {self.user}'
+
+
+class SupportMessage(models.Model):
+    """Сообщение внутри обращения. Старые не редактируются — только добавляются новые."""
+
+    ticket = models.ForeignKey(
+        SupportTicket,
+        on_delete=models.CASCADE,
+        related_name='messages',
+        verbose_name='Обращение',
+    )
+    is_staff = models.BooleanField('Ответ поддержки', default=False)
+    text = models.TextField('Текст')
+    created_at = models.DateTimeField('Создано', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Сообщение обращения'
+        verbose_name_plural = 'Сообщения обращений'
+        ordering = ['created_at']
+
+    def __str__(self):
+        who = 'Поддержка' if self.is_staff else 'Пользователь'
+        return f'{who} → обращение #{self.ticket_id}'

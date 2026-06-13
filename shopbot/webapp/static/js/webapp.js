@@ -278,6 +278,47 @@
         });
     }
 
+    // ===== Поддержка: новое обращение =====
+    function initSupportNew() {
+        const btn = document.getElementById('support-new-btn');
+        const ta = document.getElementById('support-new-text');
+        if (!btn || !ta) return;
+        btn.addEventListener('click', function () {
+            const text = ta.value.trim();
+            if (!text) { toast('Введите текст обращения'); return; }
+            btn.disabled = true;
+            post('/api/support/tickets/', { text: text })
+                .then(function (data) {
+                    haptic('light');
+                    window.location.href = '/support/' + data.id + '/';
+                })
+                .catch(function (err) {
+                    toast((err && err.detail) ? err.detail : 'Не удалось отправить');
+                    btn.disabled = false;
+                });
+        });
+    }
+
+    // ===== Поддержка: дополнить обращение =====
+    function initSupportReply() {
+        const wrap = document.querySelector('.support-box[data-ticket-id]');
+        const btn = document.getElementById('support-reply-btn');
+        const ta = document.getElementById('support-reply-text');
+        if (!wrap || !btn || !ta) return;
+        const ticketId = parseInt(wrap.dataset.ticketId, 10);
+        btn.addEventListener('click', function () {
+            const text = ta.value.trim();
+            if (!text) { toast('Введите текст сообщения'); return; }
+            btn.disabled = true;
+            post('/api/support/tickets/' + ticketId + '/messages/', { text: text })
+                .then(function () { haptic('light'); location.reload(); })
+                .catch(function (err) {
+                    toast((err && err.detail) ? err.detail : 'Не удалось отправить');
+                    btn.disabled = false;
+                });
+        });
+    }
+
     // ===== Оплата (Telegram Stars) =====
     function doCheckout(onDone) {
         post('/api/create-invoice/', {})
@@ -336,5 +377,7 @@
         initRefund();
         initInfiniteScroll();
         initCheckout();
+        initSupportNew();
+        initSupportReply();
     });
 })();

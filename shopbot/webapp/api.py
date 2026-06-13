@@ -1,3 +1,4 @@
+import html
 import json
 
 import requests
@@ -23,7 +24,9 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
         return
 
 from . import cart as cart_utils
-from .models import Order, Product, ProductKey, ShopMembership, TelegramUser
+from .models import (
+    Order, Product, ProductKey, ShopMembership, SupportMessage, SupportTicket, TelegramUser,
+)
 from .serializers import CartItemSerializer, TelegramUserSerializer
 from .telegram_auth import validate_init_data
 
@@ -36,18 +39,54 @@ def _telegram_api_url(method):
     return f'{base}{token}{test}/{method}'
 
 
-def _send_message(chat_id, text):
+def _send_message(chat_id, text, reply_markup=None):
     """Отправляет HTML-сообщение в чат через Bot API. Ошибки глушим."""
     if not chat_id:
         return
+    payload = {'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'}
+    if reply_markup is not None:
+        payload['reply_markup'] = reply_markup
     try:
-        requests.post(
-            _telegram_api_url('sendMessage'),
-            json={'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'},
-            timeout=5,
-        )
+        requests.post(_telegram_api_url('sendMessage'), json=payload, timeout=5)
     except requests.RequestException:
         pass
+
+
+def _notify_support(ticket, body):
+    """Шлёт обращение в чат поддержки (SUPPORT_CHAT_ID) с кнопкой «Ответить»."""
+    chat_id = config('SUPPORT_CHAT_ID', default='')
+    if not chat_id:
+        return
+    text = (
+        f"🆘 <b>Обращение #{ticket.id}</b>\n"
+        f"👤 {_user_label(ticket.user)}\n"
+        f"📌 {ticket.get_status_display()}\n\n"
+        f"{body}"
+    )
+    markup = {'inline_keyboard': [[
+        {'text': '✍️ Ответить', 'callback_data': f'support_reply:{ticket.id}'}
+    ]]}
+    _send_message(chat_id, text, reply_markup=markup)
+
+
+def _user_label(user):
+    return user.telegram_username or user.username or f'tg_{user.telegram_id}'
+
+
+def _message_data(m):
+    return {
+        'id': m.id, 'is_staff': m.is_staff, 'text': m.text,
+        'created_at': m.created_at.strftime('%d.%m.%Y %H:%M'),
+    }
+
+
+def _ticket_data(t):
+    return {
+        'id': t.id, 'subject': t.subject, 'status': t.status,
+        'status_display': t.get_status_display(),
+        'created_at': t.created_at.strftime('%d.%m.%Y %H:%M'),
+        'messages': [_message_data(m) for m in t.messages.all()],
+    }
 
 
 class TelegramAuthView(APIView):
@@ -267,3 +306,49 @@ class RefundOrderView(APIView):
         )
         for owner_id in owner_ids:
             _send_message(owner_id, text)
+
+
+class SupportTicketsView(APIView):
+    """GET — список обращений пользователя; POST — новое обращение."""
+
+    authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        tickets = request.user.support_tickets.prefetch_related('messages')
+        return Response([_ticket_data(t) for t in tickets])
+
+    def post(self, request):
+        text = (request.data.get('text') or '').strip()
+        if not text:
+            return Response({'detail': 'Введите текст обращения'}, status=status.HTTP_400_BAD_REQUEST)
+        text = text[:4000]
+
+        ticket = SupportTicket.objects.create(user=request.user, subject=text[:500])
+        SupportMessage.objects.create(ticket=ticket, is_staff=False, text=text)
+        _notify_support(ticket, html.escape(ticket.subject))
+        return Response(_ticket_data(ticket), status=status.HTTP_201_CREATED)
+
+
+class SupportMessageView(APIView):
+    """POST — добавить сообщение в обращение (старые не редактируются)."""
+
+    authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        ticket = get_object_or_404(SupportTicket, pk=pk, user=request.user)
+        if ticket.status == SupportTicket.Status.CLOSED:
+            return Response({'detail': 'Обращение закрыто'}, status=status.HTTP_400_BAD_REQUEST)
+
+        text = (request.data.get('text') or '').strip()
+        if not text:
+            return Response({'detail': 'Введите текст сообщения'}, status=status.HTTP_400_BAD_REQUEST)
+        text = text[:4000]
+
+        SupportMessage.objects.create(ticket=ticket, is_staff=False, text=text)
+        # Новое сообщение пользователя — снова ждём ответ поддержки
+        ticket.status = SupportTicket.Status.OPEN
+        ticket.save(update_fields=['status', 'updated_at'])
+        _notify_support(ticket, html.escape(text[:500]))
+        return Response(_ticket_data(ticket), status=status.HTTP_201_CREATED)

@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Обращение — Поддержка{% endblock %}
+
+{% block content %}
+{% if ticket %}
+<div class="thread-head">
+    <h1 class="page-title">Обращение #{{ ticket.id }}</h1>
+    <span class="ticket-status status--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+</div>
+
+<div class="chat">
+    {% for m in ticket.messages.all %}
+    <div class="bubble {% if m.is_staff %}bubble--staff{% else %}bubble--me{% endif %}">
+        <div class="bubble__author">{% if m.is_staff %}🛟 Поддержка{% else %}Вы{% endif %}</div>
+        <div class="bubble__text">{{ m.text }}</div>
+        <div class="bubble__time">{{ m.created_at|date:"d.m.Y H:i" }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if ticket.status != 'closed' %}
+<div class="support-box" data-ticket-id="{{ ticket.id }}">
+    <textarea id="support-reply-text" class="support-textarea" rows="3" maxlength="4000"
+              placeholder="Дополнить обращение…"></textarea>
+    <button id="support-reply-btn" class="support-send-btn">Отправить</button>
+</div>
+{% else %}
+<p class="text-secondary">Обращение закрыто.</p>
+{% endif %}
+{% else %}
+    {% include 'includes/empty_state.html' with icon="🔐" title="Войдите через Telegram" subtitle="Поддержка доступна после авторизации" %}
+{% endif %}
+{% endblock %}

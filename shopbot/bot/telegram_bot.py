@@ -4,19 +4,29 @@ from pathlib import Path
 
 from aiogram import Bot, F, Router, types
 from aiogram.enums import ContentType
-from aiogram.filters import Command
-from aiogram.types import FSInputFile, Message, PreCheckoutQuery, WebAppInfo
+from aiogram.filters import Command, StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import CallbackQuery, FSInputFile, Message, PreCheckoutQuery, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from asgiref.sync import sync_to_async
 from decouple import config
 from django.db import transaction
 from django.utils import timezone
 
-from webapp.models import Order, OrderItem, Product, ProductKey, ShopMembership, TelegramUser
+from webapp.models import (
+    Order, OrderItem, Product, ProductKey, ShopMembership,
+    SupportMessage, SupportTicket, TelegramUser,
+)
 
 router = Router(name=__name__)
 
 WELCOME_BANNER = Path(__file__).resolve().parent / 'assets' / 'welcome.png'
+
+
+class SupportReply(StatesGroup):
+    """Состояние: сотрудник поддержки печатает ответ на обращение."""
+    waiting = State()
 
 
 @router.message(Command("help", "start"))
@@ -86,6 +96,96 @@ async def successful_payment(message: Message):
             await message.bot.send_message(owner_id, text)
         except Exception:
             pass  # владелец мог не начать диалог с ботом
+
+
+# ===== Поддержка: ответ из саппорт-чата =====
+
+@router.callback_query(F.data.startswith('support_reply:'))
+async def support_reply_start(callback: CallbackQuery, state: FSMContext):
+    """Кнопка «Ответить» в саппорт-чате: показываем переписку и ждём текст ответа."""
+    ticket_id = int(callback.data.split(':', 1)[1])
+    conversation = await sync_to_async(_render_conversation)(ticket_id)
+    if conversation is None:
+        await callback.answer('Обращение не найдено', show_alert=True)
+        return
+
+    await callback.message.answer(conversation)
+    await callback.message.answer(
+        f"✍️ Напишите ответ по обращению <b>#{ticket_id}</b> одним сообщением.\n"
+        "Команда /cancel — отменить."
+    )
+    await state.set_state(SupportReply.waiting)
+    await state.update_data(ticket_id=ticket_id)
+    await callback.answer()
+
+
+@router.message(Command('cancel'), StateFilter(SupportReply.waiting))
+async def support_reply_cancel(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer('Отменено.')
+
+
+@router.message(StateFilter(SupportReply.waiting))
+async def support_reply_finish(message: Message, state: FSMContext, bot: Bot):
+    """Текст ответа: сохраняем, помечаем обращение отвеченным, шлём пользователю."""
+    reply_text = (message.text or '').strip()
+    if not reply_text:
+        await message.answer('Нужен текст ответа. Отправьте сообщение или /cancel.')
+        return
+
+    data = await state.get_data()
+    ticket_id = data.get('ticket_id')
+    user_tg_id = await sync_to_async(_save_staff_reply)(ticket_id, reply_text)
+    await state.clear()
+
+    if not user_tg_id:
+        await message.answer('⚠️ Обращение не найдено, ответ не сохранён.')
+        return
+
+    try:
+        await bot.send_message(
+            user_tg_id,
+            f"💬 <b>Ответ поддержки по обращению #{ticket_id}</b>\n\n{html.escape(reply_text)}",
+        )
+        await message.answer(f"✅ Ответ по обращению #{ticket_id} отправлен пользователю.")
+    except Exception:
+        await message.answer(
+            f"⚠️ Ответ по #{ticket_id} сохранён, но пользователю не доставлен "
+            "(он не запускал бота)."
+        )
+
+
+def _render_conversation(ticket_id):
+    """HTML-переписка по обращению для саппорт-чата (или None, если нет тикета)."""
+    ticket = SupportTicket.objects.filter(id=ticket_id).select_related('user').first()
+    if not ticket:
+        return None
+    user = ticket.user
+    label = user.telegram_username or user.username or f'tg_{user.telegram_id}'
+    lines = [
+        f"🆘 <b>Обращение #{ticket.id}</b>",
+        f"👤 {html.escape(label)}",
+        f"📌 {ticket.get_status_display()}",
+        "",
+        "<b>Переписка:</b>",
+    ]
+    for m in ticket.messages.all():
+        who = '🛟 Поддержка' if m.is_staff else '👤 Пользователь'
+        ts = m.created_at.strftime('%d.%m %H:%M')
+        lines.append(f"\n<b>{who}</b> · {ts}\n{html.escape(m.text)}")
+    text = "\n".join(lines)
+    return text[:3900]  # запас под лимит сообщения Telegram (4096)
+
+
+def _save_staff_reply(ticket_id, text):
+    """Сохраняет ответ поддержки, помечает обращение отвеченным, возвращает tg_id юзера."""
+    ticket = SupportTicket.objects.filter(id=ticket_id).select_related('user').first()
+    if not ticket:
+        return None
+    SupportMessage.objects.create(ticket=ticket, is_staff=True, text=text)
+    ticket.status = SupportTicket.Status.ANSWERED
+    ticket.save(update_fields=['status', 'updated_at'])
+    return ticket.user.telegram_id
 
 
 def _has_enough_keys(payload):

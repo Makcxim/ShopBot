@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Поддержка — Маркетплейс ключей{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Поддержка</h1>
+
+{% if request.user.is_authenticated %}
+<div class="support-box">
+    <p class="support-hint">Опишите вопрос или проблему — поддержка ответит прямо здесь, в чате с ботом.</p>
+    <textarea id="support-new-text" class="support-textarea" rows="4" maxlength="4000"
+              placeholder="Ваш вопрос или проблема…"></textarea>
+    <button id="support-new-btn" class="support-send-btn">Отправить обращение</button>
+</div>
+
+<h2 class="section-title">Мои обращения</h2>
+{% if tickets %}
+<div class="ticket-list">
+    {% for t in tickets %}
+    <a href="/support/{{ t.id }}/" class="ticket-card">
+        <div class="ticket-card__top">
+            <span class="ticket-card__id">Обращение #{{ t.id }}</span>
+            <span class="ticket-status status--{{ t.status }}">{{ t.get_status_display }}</span>
+        </div>
+        <div class="ticket-card__subject">{{ t.subject|truncatechars:120 }}</div>
+        <div class="ticket-card__meta">{{ t.updated_at|date:"d.m.Y H:i" }} · {{ t.messages.count }} сообщ.</div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+    {% include 'includes/empty_state.html' with icon="💬" title="Обращений пока нет" subtitle="Задайте вопрос — мы поможем" %}
+{% endif %}
+{% else %}
+    {% include 'includes/empty_state.html' with icon="🔐" title="Войдите через Telegram" subtitle="Поддержка доступна после авторизации" %}
+{% endif %}
+{% endblock %}

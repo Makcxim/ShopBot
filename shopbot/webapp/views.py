@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from . import cart as cart_utils
-from .models import Category, Order, Product, Shop
+from .models import Category, Order, Product, Shop, SupportTicket
 
 # Допустимые варианты сортировки каталога: ключ из ?sort= -> поле ORM
 SORT_OPTIONS = {
@@ -106,6 +106,34 @@ def orders_view(request):
     context = _base_context(request)
     context.update({'orders': orders})
     return render(request, 'orders.html', context)
+
+
+@ensure_csrf_cookie
+def support_view(request):
+    """Список обращений пользователя + форма нового обращения."""
+    tickets = []
+    if request.user.is_authenticated:
+        tickets = (
+            request.user.support_tickets.prefetch_related('messages')
+            .order_by('-updated_at')
+        )
+    context = _base_context(request)
+    context.update({'tickets': tickets})
+    return render(request, 'support.html', context)
+
+
+@ensure_csrf_cookie
+def support_thread_view(request, pk):
+    """Переписка по конкретному обращению + добавление сообщения."""
+    if not request.user.is_authenticated:
+        return render(request, 'support_thread.html', _base_context(request))
+    ticket = get_object_or_404(
+        SupportTicket.objects.prefetch_related('messages'),
+        pk=pk, user=request.user,
+    )
+    context = _base_context(request)
+    context.update({'ticket': ticket})
+    return render(request, 'support_thread.html', context)
 
 
 @ensure_csrf_cookie
